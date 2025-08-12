@@ -6,12 +6,13 @@ initDatabase();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const db = getDatabase();
     const project = await new Promise((resolve, reject) => {
-      db.get("SELECT * FROM projects WHERE id = ?", [params.id], (err, row) => {
+      db.get("SELECT * FROM projects WHERE id = ?", [id], (err, row) => {
         if (err) reject(err);
         else resolve(row);
       });

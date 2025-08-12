@@ -7,14 +7,15 @@ initDatabase();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const db = getDatabase();
     const tasks = await new Promise((resolve, reject) => {
       db.all(
         "SELECT * FROM tasks WHERE board_id = ? ORDER BY position ASC, created_at DESC",
-        [params.id],
+        [id],
         (err, rows) => {
           if (err) reject(err);
           else resolve(rows);
@@ -34,9 +35,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { title, description, status, priority, assignee, position } = body;
 
@@ -56,7 +58,7 @@ export async function POST(
         "INSERT INTO tasks (id, board_id, title, description, status, priority, assignee, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
           taskId,
-          params.id,
+          id,
           title,
           description || null,
           status || "todo",

@@ -6,9 +6,10 @@ initDatabase();
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { title, description, status, priority, assignee, position } = body;
 
@@ -17,7 +18,7 @@ export async function PUT(
 
     // Build dynamic update query
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: (string | number | null)[] = [];
 
     if (title !== undefined) {
       updates.push("title = ?");
@@ -45,7 +46,7 @@ export async function PUT(
     }
 
     updates.push("updated_at = ?");
-    values.push(now, params.id);
+    values.push(now, id);
 
     await new Promise((resolve, reject) => {
       db.run(
@@ -59,7 +60,7 @@ export async function PUT(
     });
 
     const task = await new Promise((resolve, reject) => {
-      db.get("SELECT * FROM tasks WHERE id = ?", [params.id], (err, row) => {
+      db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, row) => {
         if (err) reject(err);
         else resolve(row);
       });
@@ -81,13 +82,14 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const db = getDatabase();
 
     await new Promise((resolve, reject) => {
-      db.run("DELETE FROM tasks WHERE id = ?", [params.id], (err) => {
+      db.run("DELETE FROM tasks WHERE id = ?", [id], (err) => {
         if (err) reject(err);
         else resolve(undefined);
       });

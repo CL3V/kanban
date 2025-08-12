@@ -7,14 +7,15 @@ initDatabase();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const db = getDatabase();
     const boards = await new Promise((resolve, reject) => {
       db.all(
         "SELECT * FROM boards WHERE project_id = ? ORDER BY created_at DESC",
-        [params.id],
+        [id],
         (err, rows) => {
           if (err) reject(err);
           else resolve(rows);
@@ -34,9 +35,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { name, description } = body;
 
@@ -54,7 +56,7 @@ export async function POST(
     await new Promise((resolve, reject) => {
       db.run(
         "INSERT INTO boards (id, project_id, name, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-        [boardId, params.id, name, description || null, now, now],
+        [boardId, id, name, description || null, now, now],
         (err) => {
           if (err) reject(err);
           else resolve(undefined);
