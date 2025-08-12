@@ -1,22 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { initDatabase, getDatabase } from "@/lib/database";
+import { v4 as uuidv4 } from "uuid";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
+// Ensure DB initialized in serverless
+initDatabase();
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const response = await fetch(`${BACKEND_URL}/boards/project/${id}`);
+    const { id } = await params; // project id
+    const db = getDatabase();
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(errorData, { status: response.status });
-    }
+    const boards = await new Promise((resolve, reject) => {
+      db.all(
+        "SELECT * FROM boards WHERE project_id = ? ORDER BY created_at DESC",
+        [id],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        }
+      );
+    });
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(boards);
   } catch (error) {
     console.error("Error fetching boards:", error);
     return NextResponse.json(
@@ -31,27 +39,42 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await request.json();
+    const { id } = await params; // project id
+    const { name, description } = await request.json();
 
-    const response = await fetch(`${BACKEND_URL}/boards`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...body,
-        project_id: id,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(errorData, { status: response.status });
+    if (!name) {
+      return NextResponse.json(
+        { error: "Board name is required" },
+        { status: 400 }
+      );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data, { status: 201 });
+    const db = getDatabase();
+    const boardId = uuidv4();
+    const now = new Date().toISOString();
+
+    await new Promise((resolve, reject) => {
+      db.run(
+        "INSERT INTO boards (id, project_id, name, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [boardId, id, name, description || null, now, now],
+        (err) => {
+          if (err) reject(err);
+          else resolve(undefined);
+        }
+      );
+    });
+
+    return NextResponse.json(
+      {
+        id: boardId,
+        project_id: id,
+        name,
+        description,
+        created_at: now,
+        updated_at: now,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating board:", error);
     return NextResponse.json(
