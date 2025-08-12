@@ -13,6 +13,7 @@ import {
   ArrowUp,
   ArrowDown,
   Minus,
+  GripVertical,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -84,8 +85,7 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className="cursor-grab active:cursor-grabbing"
+      className="cursor-default"
     >
       <Card
         className={`hover:shadow-lg transition-all duration-200 border-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-md hover:shadow-xl hover:-translate-y-0.5 ${
@@ -95,24 +95,28 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
         }`}
       >
         <CardContent className="p-4 relative">
-          {/* Click overlay for editing - higher z-index */}
+          {/* Drag handle - positioned at the top right */}
           <div
-            className="absolute inset-0 cursor-pointer z-10 rounded-lg"
+            {...listeners}
+            className="absolute top-2 right-2 cursor-grab active:cursor-grabbing z-20 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            title="Drag to move task"
+          >
+            <GripVertical className="w-3 h-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300" />
+          </div>
+
+          {/* Click overlay for editing - covers the main content area */}
+          <div
+            className="absolute inset-0 cursor-pointer z-10 rounded-lg pr-8"
             onClick={(e: React.MouseEvent) => {
               e.preventDefault();
               e.stopPropagation();
               onEdit(task);
             }}
-            onMouseDown={(e: React.MouseEvent) => {
-              // Only handle left clicks for editing
-              if (e.button === 0) {
-                e.stopPropagation();
-              }
-            }}
+            title="Click to edit task"
           />
 
           {/* Task content - positioned below the click overlay */}
-          <div className="relative z-0 pointer-events-none">
+          <div className="relative z-0 pointer-events-none pr-6">
             {/* Task Title */}
             <h3 className="font-semibold text-gray-900 dark:text-white mb-2 leading-snug">
               {task.title}
@@ -189,19 +193,6 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
             </div>
             {/* End of task content */}
           </div>
-
-          {/* Status indicator line */}
-          <div
-            className={`h-1 rounded-full mt-3 ${
-              task.status === "todo"
-                ? "bg-slate-300 dark:bg-slate-600"
-                : task.status === "in-progress"
-                ? "bg-blue-500"
-                : task.status === "in-review"
-                ? "bg-amber-500"
-                : "bg-green-500"
-            }`}
-          />
         </CardContent>
       </Card>
     </div>

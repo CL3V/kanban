@@ -29,7 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-slate-900 min-h-screen transition-all duration-300`}
       >
-        <ThemeProvider defaultTheme="system" storageKey="kanban-theme">
+        <ThemeProvider defaultTheme="dark" storageKey="kanban-theme">
           <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-lg border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between h-16">

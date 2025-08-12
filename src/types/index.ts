@@ -1,3 +1,21 @@
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectMember {
+  id: string;
+  project_id: string;
+  user_id: string;
+  role: "owner" | "admin" | "member";
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -16,18 +34,34 @@ export interface Board {
   updated_at: string;
 }
 
+export interface Column {
+  id: string;
+  board_id: string;
+  name: string;
+  color: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Task {
   id: string;
   board_id: string;
+  column_id: string;
   title: string;
   description?: string;
-  status: "todo" | "in-progress" | "in-review" | "done";
   priority: "low" | "medium" | "high" | "urgent";
-  assignee?: string;
+  assignee_id?: string;
   position: number;
   dueDate?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  avatar?: string;
 }
 
 export interface CreateProjectRequest {
@@ -44,11 +78,11 @@ export interface CreateBoardRequest {
 
 export interface CreateTaskRequest {
   board_id: string;
+  column_id?: string;
   title: string;
   description?: string;
-  status?: Task["status"];
   priority?: Task["priority"];
-  assignee?: string;
+  assignee_id?: string;
 }
 
 export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {
@@ -58,5 +92,11 @@ export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {
 export interface DraggedTask {
   id: string;
   position: number;
-  status: Task["status"];
+  column_id: string;
+}
+
+export interface CreateColumnRequest {
+  board_id: string;
+  name: string;
+  color?: string;
 }

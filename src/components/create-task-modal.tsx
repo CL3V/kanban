@@ -1,20 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiClient } from "@/lib/api";
-import { CreateTaskRequest, Task } from "@/types";
-import { X, User } from "lucide-react";
+import { CreateTaskRequest, User, ProjectMember } from "@/types";
+import { X, User as UserIcon } from "lucide-react";
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   boardId: string;
-  initialStatus?: Task["status"];
+  projectId: string;
+  initialColumnId?: string;
+}
+
+interface MemberWithUser extends ProjectMember {
+  user: User;
 }
 
 export function CreateTaskModal({
@@ -22,18 +27,48 @@ export function CreateTaskModal({
   onClose,
   onSuccess,
   boardId,
-  initialStatus = "todo",
+  projectId,
+  initialColumnId = "",
 }: CreateTaskModalProps) {
   const [formData, setFormData] = useState<CreateTaskRequest>({
     board_id: boardId,
     title: "",
     description: "",
-    status: initialStatus,
+    column_id: initialColumnId,
     priority: "medium",
-    assignee: "",
+    assignee_id: "",
   });
+  const [projectMembers, setProjectMembers] = useState<MemberWithUser[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMembers, setLoadingMembers] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchProjectMembers = useCallback(async () => {
+    try {
+      setLoadingMembers(true);
+      const members = (await ApiClient.getProjectMembers(
+        projectId
+      )) as MemberWithUser[];
+      setProjectMembers(members);
+    } catch (err) {
+      console.error("Failed to fetch project members:", err);
+      setProjectMembers([]);
+    } finally {
+      setLoadingMembers(false);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (isOpen && projectId) {
+      fetchProjectMembers();
+    }
+  }, [isOpen, projectId, fetchProjectMembers]);
+
+  useEffect(() => {
+    if (isOpen && initialColumnId) {
+      setFormData((prev) => ({ ...prev, column_id: initialColumnId }));
+    }
+  }, [isOpen, initialColumnId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,9 +88,9 @@ export function CreateTaskModal({
         board_id: boardId,
         title: "",
         description: "",
-        status: initialStatus,
+        column_id: initialColumnId,
         priority: "medium",
-        assignee: "",
+        assignee_id: "",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create task");
@@ -117,54 +152,52 @@ export function CreateTaskModal({
               />
             </div>
 
-            {/* Status and Priority Row */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                >
-                  <option value="todo">To Do</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="in-review">In Review</option>
-                  <option value="done">Done</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Priority
-                </label>
-                <select
-                  value={formData.priority}
-                  onChange={(e) => handleChange("priority", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
+            {/* Priority */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                Priority
+              </label>
+              <select
+                value={formData.priority}
+                onChange={(e) => handleChange("priority", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
             </div>
 
             {/* Assignee */}
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                <User className="w-4 h-4 inline mr-1" />
+                <UserIcon className="w-4 h-4 inline mr-1" />
                 Assignee
               </label>
-              <Input
-                type="text"
-                value={formData.assignee || ""}
-                onChange={(e) => handleChange("assignee", e.target.value)}
-                placeholder="Enter assignee email or name..."
-                className="w-full bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400"
-              />
+              <select
+                value={formData.assignee_id || ""}
+                onChange={(e) => handleChange("assignee_id", e.target.value)}
+                disabled={loadingMembers}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              >
+                <option value="">No assignee</option>
+                {projectMembers.map((member) => (
+                  <option key={member.user_id} value={member.user_id}>
+                    {member.user.name} ({member.user.email})
+                  </option>
+                ))}
+              </select>
+              {loadingMembers && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Loading project members...
+                </p>
+              )}
+              {projectMembers.length === 0 && !loadingMembers && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  No team members assigned to this project yet.
+                </p>
+              )}
             </div>
 
             {error && (

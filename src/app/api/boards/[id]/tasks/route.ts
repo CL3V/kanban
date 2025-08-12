@@ -40,7 +40,17 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, description, status, priority, assignee, position } = body;
+    const {
+      title,
+      description,
+      status,
+      priority,
+      assignee,
+      assignee_id,
+      position,
+    } = body;
+
+    console.log("Creating task with assignee_id:", assignee_id);
 
     if (!title) {
       return NextResponse.json(
@@ -55,7 +65,7 @@ export async function POST(
 
     await new Promise((resolve, reject) => {
       db.run(
-        "INSERT INTO tasks (id, board_id, title, description, status, priority, assignee, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO tasks (id, board_id, title, description, status, priority, assignee, assignee_id, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
           taskId,
           id,
@@ -64,6 +74,7 @@ export async function POST(
           status || "todo",
           priority || "medium",
           assignee || null,
+          assignee_id || null,
           position || 0,
           now,
           now,

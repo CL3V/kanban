@@ -11,7 +11,37 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, description, status, priority, assignee, position } = body;
+    const {
+      title,
+      description,
+      status,
+      priority,
+      assignee,
+      assignee_id,
+      position,
+    } = body;
+
+    // Debug logging
+    console.log("Updating task:", id);
+    console.log("Request body:", body);
+    console.log("Status value:", status, "Type:", typeof status);
+    console.log("Assignee_id value:", assignee_id);
+
+    // Validate status if provided
+    if (status !== undefined) {
+      const validStatuses = ["todo", "in-progress", "in-review", "done"];
+      if (!validStatuses.includes(status)) {
+        console.error("Invalid status:", status);
+        return NextResponse.json(
+          {
+            error: `Invalid status: ${status}. Must be one of: ${validStatuses.join(
+              ", "
+            )}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     const db = getDatabase();
     const now = new Date().toISOString();
@@ -39,6 +69,10 @@ export async function PUT(
     if (assignee !== undefined) {
       updates.push("assignee = ?");
       values.push(assignee);
+    }
+    if (assignee_id !== undefined) {
+      updates.push("assignee_id = ?");
+      values.push(assignee_id || null);
     }
     if (position !== undefined) {
       updates.push("position = ?");

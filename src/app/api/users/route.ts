@@ -4,7 +4,7 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 export async function GET() {
   try {
-    const response = await fetch(`${BACKEND_URL}/projects`);
+    const response = await fetch(`${BACKEND_URL}/members/users`);
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -14,9 +14,9 @@ export async function GET() {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error fetching projects:", error);
+    console.error("Error fetching users:", error);
     return NextResponse.json(
-      { error: "Failed to fetch projects" },
+      { error: "Failed to fetch users" },
       { status: 500 }
     );
   }
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const response = await fetch(`${BACKEND_URL}/projects`, {
+    const response = await fetch(`${BACKEND_URL}/members/users`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
-    console.error("Error creating project:", error);
+    console.error("Error creating user:", error);
     return NextResponse.json(
-      { error: "Failed to create project" },
+      { error: "Failed to create user" },
       { status: 500 }
     );
   }

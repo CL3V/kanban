@@ -110,11 +110,11 @@ export class ApiClient {
 
   static async createTask(data: {
     board_id: string;
+    column_id?: string;
     title: string;
     description?: string;
-    status?: string;
     priority?: string;
-    assignee?: string;
+    assignee_id?: string;
   }) {
     return this.request(`/boards/${data.board_id}/tasks`, {
       method: "POST",
@@ -127,9 +127,9 @@ export class ApiClient {
     data: {
       title?: string;
       description?: string;
-      status?: string;
+      column_id?: string;
       priority?: string;
-      assignee?: string;
+      assignee_id?: string;
       position?: number;
     }
   ) {
@@ -141,6 +141,82 @@ export class ApiClient {
 
   static async deleteTask(id: string) {
     return this.request(`/tasks/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Users
+  static async getUsers() {
+    return this.request("/users");
+  }
+
+  static async createUser(data: {
+    name: string;
+    email: string;
+    avatar?: string;
+  }) {
+    return this.request("/users", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Project Members
+  static async getProjectMembers(projectId: string) {
+    return this.request(`/projects/${projectId}/members`);
+  }
+
+  static async addProjectMember(
+    projectId: string,
+    data: {
+      user_id: string;
+      role?: string;
+    }
+  ) {
+    return this.request(`/projects/${projectId}/members`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  static async removeProjectMember(projectId: string, userId: string) {
+    return this.request(`/projects/${projectId}/members/${userId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Columns
+  static async getColumns(boardId: string) {
+    return this.request(`/columns/board/${boardId}`);
+  }
+
+  static async createColumn(data: {
+    board_id: string;
+    name: string;
+    color?: string;
+  }) {
+    return this.request("/columns", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  static async updateColumn(
+    id: string,
+    data: {
+      name?: string;
+      color?: string;
+      position?: number;
+    }
+  ) {
+    return this.request(`/columns/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  static async deleteColumn(id: string) {
+    return this.request(`/columns?id=${id}`, {
       method: "DELETE",
     });
   }

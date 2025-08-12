@@ -66,15 +66,31 @@ export function initDatabase(): void {
           status TEXT CHECK(status IN ('todo', 'in-progress', 'in-review', 'done')) DEFAULT 'todo',
           priority TEXT CHECK(priority IN ('low', 'medium', 'high', 'urgent')) DEFAULT 'medium',
           assignee TEXT,
+          assignee_id TEXT,
           position INTEGER DEFAULT 0,
           due_date DATETIME,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (board_id) REFERENCES boards (id) ON DELETE CASCADE
+          FOREIGN KEY (board_id) REFERENCES boards (id) ON DELETE CASCADE,
+          FOREIGN KEY (assignee_id) REFERENCES users (id) ON DELETE SET NULL
         )
       `);
 
       console.log("Database tables created successfully");
+
+      // Migration: Add assignee_id column if it doesn't exist
+      database!.run(
+        `
+        ALTER TABLE tasks ADD COLUMN assignee_id TEXT
+      `,
+        (err) => {
+          if (err && !err.message.includes("duplicate column name")) {
+            console.error("Error adding assignee_id column:", err);
+          } else if (!err) {
+            console.log("Added assignee_id column to tasks table");
+          }
+        }
+      );
     });
   }
 }

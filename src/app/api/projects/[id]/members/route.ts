@@ -7,8 +7,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const response = await fetch(`${BACKEND_URL}/boards/project/${id}`);
+    const { id: projectId } = await params;
+
+    const response = await fetch(`${BACKEND_URL}/members/project/${projectId}`);
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -18,9 +19,9 @@ export async function GET(
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error fetching boards:", error);
+    console.error("Error fetching project members:", error);
     return NextResponse.json(
-      { error: "Failed to fetch boards" },
+      { error: "Failed to fetch project members" },
       { status: 500 }
     );
   }
@@ -31,19 +32,19 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id: projectId } = await params;
     const body = await request.json();
 
-    const response = await fetch(`${BACKEND_URL}/boards`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...body,
-        project_id: id,
-      }),
-    });
+    const response = await fetch(
+      `${BACKEND_URL}/members/project/${projectId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -53,9 +54,9 @@ export async function POST(
     const data = await response.json();
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
-    console.error("Error creating board:", error);
+    console.error("Error adding project member:", error);
     return NextResponse.json(
-      { error: "Failed to create board" },
+      { error: "Failed to add project member" },
       { status: 500 }
     );
   }

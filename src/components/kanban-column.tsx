@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TaskCard } from "@/components/task-card";
 import { Task } from "@/types";
-import { Plus, MoreHorizontal } from "lucide-react";
+import { Plus, MoreHorizontal, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface KanbanColumnProps {
   id: string;
@@ -18,6 +19,7 @@ interface KanbanColumnProps {
   tasks: Task[];
   onCreateTask: () => void;
   onEditTask: (task: Task) => void;
+  onDeleteColumn: (columnId: string) => void;
 }
 
 export function KanbanColumn({
@@ -27,6 +29,7 @@ export function KanbanColumn({
   tasks,
   onCreateTask,
   onEditTask,
+  onDeleteColumn,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -47,13 +50,31 @@ export function KanbanColumn({
                 {tasks.length}
               </span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 hover:bg-white/50 dark:hover:bg-slate-700/50 rounded-full"
+            <DropdownMenu
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-white/50 dark:hover:bg-slate-700/50 rounded-full"
+                >
+                  <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </Button>
+              }
             >
-              <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            </Button>
+              <DropdownMenuItem
+                destructive
+                onClick={() => onDeleteColumn(id)}
+                disabled={tasks.length > 0}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete column
+              </DropdownMenuItem>
+              {tasks.length > 0 && (
+                <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+                  Cannot delete column with tasks
+                </div>
+              )}
+            </DropdownMenu>
           </div>
         </CardHeader>
 

@@ -5,11 +5,13 @@ import { initDatabase } from "./database/db";
 import projectRoutes from "./routes/projects";
 import boardRoutes from "./routes/boards";
 import taskRoutes from "./routes/tasks";
+import columnRoutes from "./routes/columns";
+import memberRoutes from "./routes/members";
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.BACKEND_PORT || 3001;
 
 // Middleware
 app.use(
@@ -26,9 +28,11 @@ app.use(express.json());
 initDatabase();
 
 // Routes
-app.use("/api/projects", projectRoutes);
-app.use("/api/boards", boardRoutes);
-app.use("/api/tasks", taskRoutes);
+app.use("/projects", projectRoutes);
+app.use("/boards", boardRoutes);
+app.use("/tasks", taskRoutes);
+app.use("/columns", columnRoutes);
+app.use("/members", memberRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

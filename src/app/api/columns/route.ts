@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest) {
   try {
-    const { id } = await params;
-    const response = await fetch(`${BACKEND_URL}/projects/${id}`);
+    const body = await request.json();
+
+    const response = await fetch(`${BACKEND_URL}/columns`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -18,23 +22,28 @@ export async function GET(
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error fetching project:", error);
+    console.error("Error creating column:", error);
     return NextResponse.json(
-      { error: "Failed to fetch project" },
+      { error: "Failed to create column" },
       { status: 500 }
     );
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest) {
   try {
-    const { id } = await params;
     const body = await request.json();
+    const url = new URL(request.url);
+    const columnId = url.searchParams.get("id");
 
-    const response = await fetch(`${BACKEND_URL}/projects/${id}`, {
+    if (!columnId) {
+      return NextResponse.json(
+        { error: "Column ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(`${BACKEND_URL}/columns/${columnId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -50,22 +59,27 @@ export async function PUT(
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error updating project:", error);
+    console.error("Error updating column:", error);
     return NextResponse.json(
-      { error: "Failed to update project" },
+      { error: "Failed to update column" },
       { status: 500 }
     );
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest) {
   try {
-    const { id } = await params;
+    const url = new URL(request.url);
+    const columnId = url.searchParams.get("id");
 
-    const response = await fetch(`${BACKEND_URL}/projects/${id}`, {
+    if (!columnId) {
+      return NextResponse.json(
+        { error: "Column ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(`${BACKEND_URL}/columns/${columnId}`, {
       method: "DELETE",
     });
 
@@ -77,9 +91,9 @@ export async function DELETE(
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error deleting project:", error);
+    console.error("Error deleting column:", error);
     return NextResponse.json(
-      { error: "Failed to delete project" },
+      { error: "Failed to delete column" },
       { status: 500 }
     );
   }

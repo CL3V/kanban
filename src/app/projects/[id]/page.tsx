@@ -12,7 +12,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Plus, LayoutGrid, Calendar } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ProjectMembers } from "@/components/project-members";
+import {
+  ArrowLeft,
+  Plus,
+  LayoutGrid,
+  Calendar,
+  MoreVertical,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { CreateBoardModal } from "@/components/create-board-modal";
@@ -26,6 +36,9 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateBoardModalOpen, setIsCreateBoardModalOpen] = useState(false);
+  const [refreshTrigger] = useState(0);
+  const [deletingBoard, setDeletingBoard] = useState<string | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const loadProjectData = useCallback(async () => {
     try {
@@ -51,6 +64,20 @@ export default function ProjectPage() {
     }
   }, [projectId, loadProjectData]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!event.target || !(event.target as Element).closest(".relative")) {
+        setOpenDropdown(null);
+      }
+    };
+
+    if (openDropdown) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [openDropdown]);
+
   const handleCreateBoard = () => {
     setIsCreateBoardModalOpen(true);
   };
@@ -59,10 +86,35 @@ export default function ProjectPage() {
     loadProjectData(); // Refresh the boards list
   };
 
+  const handleDeleteBoard = async (boardId: string, boardName: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${boardName}"? This action cannot be undone and will delete all tasks in this board.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setDeletingBoard(boardId);
+      await ApiClient.deleteBoard(boardId);
+      setBoards(boards.filter((b) => b.id !== boardId));
+      setOpenDropdown(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete board");
+    } finally {
+      setDeletingBoard(null);
+    }
+  };
+
+  const toggleDropdown = (boardId: string) => {
+    setOpenDropdown(openDropdown === boardId ? null : boardId);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" text="Loading project..." />
       </div>
     );
   }
@@ -98,9 +150,7 @@ export default function ProjectPage() {
                 style={{ backgroundColor: project.color }}
               />
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  {project.name}
-                </h1>
+                <h1 className="text-3xl font-bold">{project.name}</h1>
                 {project.description && (
                   <p className="text-gray-600 mt-1">{project.description}</p>
                 )}
@@ -154,6 +204,9 @@ export default function ProjectPage() {
           </Card>
         </div>
 
+        {/* Project Members */}
+        <ProjectMembers projectId={projectId} refreshTrigger={refreshTrigger} />
+
         {/* Boards */}
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Boards</h2>
@@ -174,27 +227,87 @@ export default function ProjectPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {boards.map((board) => (
-                <Link
+                <Card
                   key={board.id}
-                  href={`/projects/${projectId}/boards/${board.id}`}
+                  className="hover:shadow-md transition-shadow h-full relative group"
                 >
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                    <CardHeader>
-                      <CardTitle className="text-lg">{board.name}</CardTitle>
-                      {board.description && (
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <Link
+                        href={`/projects/${projectId}/boards/${board.id}`}
+                        className="flex-1 min-w-0"
+                      >
+                        <CardTitle className="text-lg hover:text-blue-600 transition-colors">
+                          {board.name}
+                        </CardTitle>
+                      </Link>
+
+                      {/* Dropdown Menu */}
+                      <div className="relative">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleDropdown(board.id);
+                          }}
+                          disabled={deletingBoard === board.id}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+
+                        {openDropdown === board.id && (
+                          <div className="absolute right-0 top-9 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10 min-w-32">
+                            <button
+                              className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // TODO: Add edit board functionality
+                                setOpenDropdown(null);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                              Edit
+                            </button>
+                            <button
+                              className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDeleteBoard(board.id, board.name);
+                              }}
+                              disabled={deletingBoard === board.id}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              {deletingBoard === board.id
+                                ? "Deleting..."
+                                : "Delete"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {board.description && (
+                      <Link href={`/projects/${projectId}/boards/${board.id}`}>
                         <CardDescription className="line-clamp-2">
                           {board.description}
                         </CardDescription>
-                      )}
-                    </CardHeader>
+                      </Link>
+                    )}
+                  </CardHeader>
+                  <Link href={`/projects/${projectId}/boards/${board.id}`}>
                     <CardContent>
                       <div className="flex items-center text-sm text-gray-500">
                         <Calendar className="w-4 h-4 mr-2" />
                         Created {formatDate(board.created_at)}
                       </div>
                     </CardContent>
-                  </Card>
-                </Link>
+                  </Link>
+                </Card>
               ))}
             </div>
           )}

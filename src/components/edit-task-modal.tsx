@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiClient } from "@/lib/api";
-import { UpdateTaskRequest, Task } from "@/types";
-import { X, User, Trash2, Save } from "lucide-react";
+import { UpdateTaskRequest, Task, User, ProjectMember, Column } from "@/types";
+import { X, User as UserIcon, Trash2, Save } from "lucide-react";
 
 interface EditTaskModalProps {
   isOpen: boolean;
@@ -15,6 +15,11 @@ interface EditTaskModalProps {
   onSuccess: () => void;
   onDelete: () => void;
   task: Task;
+  projectId: string;
+}
+
+interface MemberWithUser extends ProjectMember {
+  user: User;
 }
 
 export function EditTaskModal({
@@ -23,17 +28,70 @@ export function EditTaskModal({
   onSuccess,
   onDelete,
   task,
+  projectId,
 }: EditTaskModalProps) {
   const [formData, setFormData] = useState<UpdateTaskRequest>({
     title: task.title,
     description: task.description || "",
-    status: task.status,
+    column_id: task.column_id,
     priority: task.priority,
-    assignee: task.assignee || "",
+    assignee_id: task.assignee_id || "",
   });
+  const [columns, setColumns] = useState<Column[]>([]);
+  const [projectMembers, setProjectMembers] = useState<MemberWithUser[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [loadingColumns, setLoadingColumns] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchProjectMembers = useCallback(async () => {
+    try {
+      setLoadingMembers(true);
+      const members = (await ApiClient.getProjectMembers(
+        projectId
+      )) as MemberWithUser[];
+      setProjectMembers(members);
+    } catch (err) {
+      console.error("Failed to fetch project members:", err);
+      setProjectMembers([]);
+    } finally {
+      setLoadingMembers(false);
+    }
+  }, [projectId]);
+
+  const fetchColumns = useCallback(async () => {
+    try {
+      setLoadingColumns(true);
+      const columnData = (await ApiClient.getColumns(
+        task.board_id
+      )) as Column[];
+      setColumns(columnData);
+    } catch (err) {
+      console.error("Failed to fetch columns:", err);
+      setColumns([]);
+    } finally {
+      setLoadingColumns(false);
+    }
+  }, [task.board_id]);
+
+  useEffect(() => {
+    if (isOpen && projectId) {
+      fetchProjectMembers();
+      fetchColumns();
+    }
+  }, [isOpen, projectId, fetchProjectMembers, fetchColumns]);
+
+  useEffect(() => {
+    // Update form data when task changes
+    setFormData({
+      title: task.title,
+      description: task.description || "",
+      column_id: task.column_id,
+      priority: task.priority,
+      assignee_id: task.assignee_id || "",
+    });
+  }, [task]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,7 +174,7 @@ export function EditTaskModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Task Title */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
                 Task Title *
               </label>
               <Input
@@ -131,7 +189,7 @@ export function EditTaskModal({
 
             {/* Description */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
                 Description
               </label>
               <Textarea
@@ -142,32 +200,40 @@ export function EditTaskModal({
               />
             </div>
 
-            {/* Status and Priority Row */}
+            {/* Column and Priority Row */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Status
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                  Column
                 </label>
                 <select
-                  value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.column_id}
+                  onChange={(e) => handleChange("column_id", e.target.value)}
+                  disabled={loadingColumns}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 >
-                  <option value="todo">To Do</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="in-review">In Review</option>
-                  <option value="done">Done</option>
+                  <option value="">Select column</option>
+                  {columns.map((column) => (
+                    <option key={column.id} value={column.id}>
+                      {column.name}
+                    </option>
+                  ))}
                 </select>
+                {loadingColumns && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Loading columns...
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
                   Priority
                 </label>
                 <select
                   value={formData.priority}
                   onChange={(e) => handleChange("priority", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -179,25 +245,41 @@ export function EditTaskModal({
 
             {/* Assignee */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">
-                <User className="w-4 h-4 inline mr-1" />
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
+                <UserIcon className="w-4 h-4 inline mr-1" />
                 Assignee
               </label>
-              <Input
-                type="text"
-                value={formData.assignee || ""}
-                onChange={(e) => handleChange("assignee", e.target.value)}
-                placeholder="Enter assignee email or name..."
-                className="w-full"
-              />
+              <select
+                value={formData.assignee_id || ""}
+                onChange={(e) => handleChange("assignee_id", e.target.value)}
+                disabled={loadingMembers}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              >
+                <option value="">No assignee</option>
+                {projectMembers.map((member) => (
+                  <option key={member.user_id} value={member.user_id}>
+                    {member.user.name} ({member.user.email})
+                  </option>
+                ))}
+              </select>
+              {loadingMembers && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Loading project members...
+                </p>
+              )}
+              {projectMembers.length === 0 && !loadingMembers && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  No team members assigned to this project yet.
+                </p>
+              )}
             </div>
 
             {/* Task Metadata */}
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">
+            <div className="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Task Information
               </h4>
-              <div className="space-y-1 text-xs text-gray-600">
+              <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
                 <p>Position: #{task.position}</p>
                 <p>Created: {formatDate(task.created_at)}</p>
                 <p>Updated: {formatDate(task.updated_at)}</p>
