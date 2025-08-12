@@ -74,7 +74,8 @@ export default function BoardPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
-  const [createTaskStatus, setCreateTaskStatus] = useState<Task["status"]>("todo");
+  const [createTaskStatus, setCreateTaskStatus] =
+    useState<Task["status"]>("todo");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<string[]>([]);
