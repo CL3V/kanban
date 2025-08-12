@@ -1,36 +1,195 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kanban Board - Project Management Tool
 
-## Getting Started
+A modern, full-stack Kanban board application built with Next.js, TypeScript, Express.js, and SQLite. This application allows you to create projects, manage boards within projects, and organize tasks using a drag-and-drop Kanban interface similar to Jira.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### ✨ Core Features
+
+- **Project Management**: Create and manage multiple projects with custom colors
+- **Board Organization**: Create multiple boards within each project
+- **Task Management**: Add, edit, and delete tasks with detailed information
+- **Drag & Drop**: Intuitive task movement between columns (To Do, In Progress, In Review, Done)
+- **Priority System**: Set task priorities (Low, Medium, High, Urgent)
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+
+### 🛠 Technical Features
+
+- **Full-stack TypeScript**: Type-safe development across frontend and backend
+- **Modern UI**: Built with Tailwind CSS for responsive design
+- **RESTful API**: Express.js backend with structured API endpoints
+- **Database**: SQLite for lightweight, serverless data storage
+- **Real-time Updates**: Efficient state management and data synchronization
+
+## Tech Stack
+
+### Frontend
+
+- **Next.js 15** - React framework with App Router
+- **TypeScript** - Type-safe JavaScript
+- **Tailwind CSS** - Utility-first CSS framework
+- **Lucide React** - Beautiful icons
+- **@dnd-kit** - Drag and drop functionality
+
+### Backend
+
+- **Express.js** - Web application framework
+- **SQLite3** - Lightweight database
+- **CORS** - Cross-origin resource sharing
+- **UUID** - Unique identifier generation
+
+### Development
+
+- **ESLint** - Code linting
+- **Nodemon** - Auto-restart development server
+- **Concurrently** - Run multiple npm scripts
+
+## Installation
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+
+### Setup
+
+1. **Clone the repository**
+
+   ```bash
+   git clone <your-repo-url>
+   cd core-team-kanban
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Start the development servers**
+
+   ```bash
+   # Start both frontend and backend
+   npm run dev:full
+
+   # Or start them separately:
+   npm run backend    # Backend only (port 3001)
+   npm run dev        # Frontend only (port 3000)
+   ```
+
+4. **Open the application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:3001/api
+
+## Project Structure
+
+```
+core-team-kanban/
+├── backend/                 # Express.js backend
+│   ├── database/           # SQLite database and schema
+│   ├── routes/            # API route handlers
+│   ├── types/             # TypeScript type definitions
+│   └── server.ts          # Express server setup
+├── src/                   # Next.js frontend
+│   ├── app/              # App Router pages
+│   ├── components/       # React components
+│   ├── lib/             # Utility functions and API client
+│   └── types/           # Frontend type definitions
+├── public/              # Static assets
+└── .vscode/            # VS Code tasks and settings
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## API Endpoints
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Projects
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `GET /api/projects` - Get all projects
+- `GET /api/projects/:id` - Get a specific project
+- `POST /api/projects` - Create a new project
+- `PUT /api/projects/:id` - Update a project
+- `DELETE /api/projects/:id` - Delete a project
 
-## Learn More
+### Boards
 
-To learn more about Next.js, take a look at the following resources:
+- `GET /api/boards/project/:projectId` - Get all boards for a project
+- `GET /api/boards/:id` - Get a specific board
+- `POST /api/boards` - Create a new board
+- `PUT /api/boards/:id` - Update a board
+- `DELETE /api/boards/:id` - Delete a board
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Tasks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `GET /api/tasks/board/:boardId` - Get all tasks for a board
+- `GET /api/tasks/:id` - Get a specific task
+- `POST /api/tasks` - Create a new task
+- `PUT /api/tasks/:id` - Update a task
+- `PUT /api/tasks/reorder/positions` - Reorder tasks (drag & drop)
+- `DELETE /api/tasks/:id` - Delete a task
 
-## Deploy on Vercel
+## Development
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Available Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run dev` - Start Next.js frontend development server
+- `npm run backend` - Start Express.js backend development server
+- `npm run dev:full` - Start both frontend and backend concurrently
+- `npm run build` - Build the application for production
+- `npm run start` - Start the production build
+- `npm run lint` - Run ESLint
+
+### Database
+
+The SQLite database is automatically created and initialized when the backend starts. The database file is located at `backend/database/kanban.db`.
+
+### VS Code Tasks
+
+The project includes VS Code tasks for easy development:
+
+- **Start Full Development Server** - Runs both frontend and backend
+- **Start Frontend Only** - Runs just the Next.js dev server
+- **Start Backend Only** - Runs just the Express.js server
+
+Access these via VS Code: `Terminal > Run Task...`
+
+## Usage
+
+1. **Create a Project**: Start by creating your first project with a name, description, and color
+2. **Add Boards**: Within each project, create boards to organize different areas of work
+3. **Manage Tasks**: Add tasks to boards and move them through the workflow stages
+4. **Organize**: Use drag-and-drop to reorder tasks and change their status
+5. **Prioritize**: Set priorities and assign team members to tasks
+
+## Deployment
+
+### Vercel Deployment (Frontend)
+
+1. Connect your GitHub repository to Vercel
+2. Configure build settings:
+   - Build Command: `npm run build`
+   - Output Directory: `.next`
+3. Deploy
+
+### Backend Deployment
+
+The backend can be deployed to services like Railway, Render, or any Node.js hosting provider. Make sure to:
+
+1. Set `NODE_ENV=production`
+2. Configure CORS for your frontend domain
+3. Ensure SQLite file persistence
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/new-feature`
+3. Commit changes: `git commit -am 'Add new feature'`
+4. Push to the branch: `git push origin feature/new-feature`
+5. Submit a pull request
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+---
+
+Built with ❤️ using Next.js, TypeScript, and Express.js
+# kanban
