@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiClient } from "@/lib/api";
 import { UpdateTaskRequest, Task } from "@/types";
-import { X, Calendar, User, Flag, Trash2, Save } from "lucide-react";
+import { X, User, Trash2, Save } from "lucide-react";
 
 interface EditTaskModalProps {
   isOpen: boolean;

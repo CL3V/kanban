@@ -74,6 +74,7 @@ export default function BoardPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+  const [createTaskStatus, setCreateTaskStatus] = useState<Task["status"]>("todo");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<string[]>([]);
@@ -106,6 +107,8 @@ export default function BoardPage() {
       loadBoardData();
     }
   }, [projectId, boardId, loadBoardData]);
+
+  // Close filter dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -168,6 +171,7 @@ export default function BoardPage() {
   };
 
   const handleCreateTask = (status: Task["status"]) => {
+    setCreateTaskStatus(status);
     setIsCreateTaskModalOpen(true);
   };
 
@@ -474,7 +478,6 @@ export default function BoardPage() {
                     <KanbanColumn
                       id={column.id}
                       title={column.title}
-                      color={column.color}
                       headerColor={column.headerColor}
                       tasks={columnTasks}
                       onCreateTask={() => handleCreateTask(column.id)}
@@ -504,6 +507,7 @@ export default function BoardPage() {
         onClose={() => setIsCreateTaskModalOpen(false)}
         onSuccess={handleTaskCreated}
         boardId={boardId}
+        initialStatus={createTaskStatus}
       />
 
       {editingTask && (

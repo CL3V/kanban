@@ -14,7 +14,6 @@ import { Plus, MoreHorizontal } from "lucide-react";
 interface KanbanColumnProps {
   id: string;
   title: string;
-  color: string;
   headerColor: string;
   tasks: Task[];
   onCreateTask: () => void;
@@ -24,7 +23,6 @@ interface KanbanColumnProps {
 export function KanbanColumn({
   id,
   title,
-  color,
   headerColor,
   tasks,
   onCreateTask,
@@ -81,7 +79,7 @@ export function KanbanColumn({
               <div className="text-center text-gray-400 dark:text-gray-500 py-12">
                 <p className="text-sm font-medium">No tasks yet</p>
                 <p className="text-xs mt-1">
-                  Click "Add a task" to get started
+                  Click &ldquo;Add a task&rdquo; to get started
                 </p>
               </div>
             )}

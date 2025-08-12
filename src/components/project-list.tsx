@@ -32,7 +32,7 @@ export function ProjectList({ onCreateProject }: ProjectListProps) {
     try {
       setLoading(true);
       const data = await ApiClient.getProjects();
-      setProjects(data);
+      setProjects(data as Project[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load projects");
     } finally {

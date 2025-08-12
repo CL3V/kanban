@@ -80,9 +80,9 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
   };
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
+    <div
+      ref={setNodeRef}
+      style={style}
       {...attributes}
       {...listeners}
       className="cursor-grab active:cursor-grabbing"
@@ -96,7 +96,7 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
       >
         <CardContent className="p-4 relative">
           {/* Click overlay for editing - higher z-index */}
-          <div 
+          <div
             className="absolute inset-0 cursor-pointer z-10 rounded-lg"
             onClick={(e: React.MouseEvent) => {
               e.preventDefault();
@@ -110,7 +110,7 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
               }
             }}
           />
-          
+
           {/* Task content - positioned below the click overlay */}
           <div className="relative z-0 pointer-events-none">
             {/* Task Title */}
@@ -118,76 +118,76 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
               {task.title}
             </h3>
 
-          {/* Task Description */}
-          {task.description && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-              {task.description}
-            </p>
-          )}
+            {/* Task Description */}
+            {task.description && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                {task.description}
+              </p>
+            )}
 
-          {/* Priority Badge */}
-          <div className="flex items-center gap-2 mb-3">
-            <Badge
-              variant={
-                task.priority === "high"
-                  ? "priority-high"
-                  : task.priority === "urgent"
-                  ? "priority-critical"
-                  : task.priority === "medium"
-                  ? "priority-medium"
-                  : "priority-low"
-              }
-            >
-              <PriorityIcon className="w-3 h-3 mr-1" />
-              {priorityConfig.label}
-            </Badge>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <div className="flex items-center gap-3">
-              {/* Task ID */}
-              <span className="font-mono bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded text-[10px]">
-                #{task.id.slice(0, 6)}
-              </span>
-
-              {/* Attachments count (placeholder) */}
-              <div className="flex items-center gap-1 opacity-60">
-                <Paperclip className="w-3 h-3" />
-                <span>0</span>
-              </div>
-
-              {/* Comments count (placeholder) */}
-              <div className="flex items-center gap-1 opacity-60">
-                <MessageSquare className="w-3 h-3" />
-                <span>0</span>
-              </div>
+            {/* Priority Badge */}
+            <div className="flex items-center gap-2 mb-3">
+              <Badge
+                variant={
+                  task.priority === "high"
+                    ? "priority-high"
+                    : task.priority === "urgent"
+                    ? "priority-critical"
+                    : task.priority === "medium"
+                    ? "priority-medium"
+                    : "priority-low"
+                }
+              >
+                <PriorityIcon className="w-3 h-3 mr-1" />
+                {priorityConfig.label}
+              </Badge>
             </div>
 
-            {/* Due date and assignee */}
-            <div className="flex items-center gap-2">
-              {task.dueDate && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  <span
-                    className={
-                      new Date(task.dueDate) < new Date()
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-gray-500 dark:text-gray-400"
-                    }
-                  >
-                    {formatDate(task.dueDate)}
-                  </span>
+            {/* Footer */}
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-3">
+                {/* Task ID */}
+                <span className="font-mono bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded text-[10px]">
+                  #{task.id.slice(0, 6)}
+                </span>
+
+                {/* Attachments count (placeholder) */}
+                <div className="flex items-center gap-1 opacity-60">
+                  <Paperclip className="w-3 h-3" />
+                  <span>0</span>
                 </div>
-              )}
 
-              {/* Assignee Avatar (placeholder) */}
-              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
-                <User className="w-3 h-3 text-white" />
+                {/* Comments count (placeholder) */}
+                <div className="flex items-center gap-1 opacity-60">
+                  <MessageSquare className="w-3 h-3" />
+                  <span>0</span>
+                </div>
+              </div>
+
+              {/* Due date and assignee */}
+              <div className="flex items-center gap-2">
+                {task.dueDate && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    <span
+                      className={
+                        new Date(task.dueDate) < new Date()
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-gray-500 dark:text-gray-400"
+                      }
+                    >
+                      {formatDate(task.dueDate)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Assignee Avatar (placeholder) */}
+                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
+                  <User className="w-3 h-3 text-white" />
+                </div>
               </div>
             </div>
-          </div>
-          {/* End of task content */}
+            {/* End of task content */}
           </div>
 
           {/* Status indicator line */}

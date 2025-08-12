@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Project, Board } from "@/types";
 import { ApiClient } from "@/lib/api";
@@ -27,13 +27,7 @@ export default function ProjectPage() {
   const [error, setError] = useState<string | null>(null);
   const [isCreateBoardModalOpen, setIsCreateBoardModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (projectId) {
-      loadProjectData();
-    }
-  }, [projectId]);
-
-  const loadProjectData = async () => {
+  const loadProjectData = useCallback(async () => {
     try {
       setLoading(true);
       const [projectData, boardsData] = await Promise.all([
@@ -49,7 +43,13 @@ export default function ProjectPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      loadProjectData();
+    }
+  }, [projectId, loadProjectData]);
 
   const handleCreateBoard = () => {
     setIsCreateBoardModalOpen(true);
