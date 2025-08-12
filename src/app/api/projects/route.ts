@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { initDatabase, getDatabase } from "@/lib/database";
+import { v4 as uuidv4 } from "uuid";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
+// Ensure DB is initialized for serverless
+initDatabase();
 
 export async function GET() {
   try {
-    const response = await fetch(`${BACKEND_URL}/projects`);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(errorData, { status: response.status });
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
+    const db = getDatabase();
+    const projects = await new Promise((resolve, reject) => {
+      db.all("SELECT * FROM projects ORDER BY created_at DESC", (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+    return NextResponse.json(projects);
   } catch (error) {
     console.error("Error fetching projects:", error);
     return NextResponse.json(
@@ -24,23 +26,33 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-
-    const response = await fetch(`${BACKEND_URL}/projects`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(errorData, { status: response.status });
+    const { name, description, color = "#3B82F6" } = await request.json();
+    if (!name) {
+      return NextResponse.json(
+        { error: "Project name is required" },
+        { status: 400 }
+      );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data, { status: 201 });
+    const db = getDatabase();
+    const id = uuidv4();
+    const now = new Date().toISOString();
+
+    await new Promise((resolve, reject) => {
+      db.run(
+        "INSERT INTO projects (id, name, description, color, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [id, name, description || null, color, now, now],
+        (err) => {
+          if (err) reject(err);
+          else resolve(undefined);
+        }
+      );
+    });
+
+    return NextResponse.json(
+      { id, name, description, color, created_at: now, updated_at: now },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating project:", error);
     return NextResponse.json(

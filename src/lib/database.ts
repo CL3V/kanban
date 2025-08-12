@@ -31,6 +31,18 @@ export function initDatabase(): void {
   // Create tables
   if (database) {
     database.serialize(() => {
+      // Users table
+      database!.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          avatar TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
       // Projects table
       database!.run(`
         CREATE TABLE IF NOT EXISTS projects (
