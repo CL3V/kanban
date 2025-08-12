@@ -65,7 +65,7 @@ export class ApiClient {
 
   // Boards
   static async getBoards(projectId: string) {
-    return this.request(`/boards/project/${projectId}`);
+    return this.request(`/projects/${projectId}/boards`);
   }
 
   static async getBoard(id: string) {
@@ -77,7 +77,7 @@ export class ApiClient {
     name: string;
     description?: string;
   }) {
-    return this.request("/boards", {
+    return this.request(`/projects/${data.project_id}/boards`, {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -101,7 +101,7 @@ export class ApiClient {
 
   // Tasks
   static async getTasks(boardId: string) {
-    return this.request(`/tasks/board/${boardId}`);
+    return this.request(`/boards/${boardId}/tasks`);
   }
 
   static async getTask(id: string) {
@@ -116,7 +116,7 @@ export class ApiClient {
     priority?: string;
     assignee?: string;
   }) {
-    return this.request("/tasks", {
+    return this.request(`/boards/${data.board_id}/tasks`, {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -136,15 +136,6 @@ export class ApiClient {
     return this.request(`/tasks/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    });
-  }
-
-  static async reorderTasks(
-    tasks: { id: string; position: number; status?: string }[]
-  ) {
-    return this.request("/tasks/reorder/positions", {
-      method: "PUT",
-      body: JSON.stringify({ tasks }),
     });
   }
 
