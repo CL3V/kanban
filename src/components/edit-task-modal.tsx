@@ -16,6 +16,11 @@ interface EditTaskModalProps {
   onDelete: () => void;
   task: Task;
   projectId: string;
+  // Optional preloaded data to reduce perceived latency
+  preload?: {
+    members?: MemberWithUser[];
+    columns?: Column[];
+  };
 }
 
 interface MemberWithUser extends ProjectMember {
@@ -29,6 +34,7 @@ export function EditTaskModal({
   onDelete,
   task,
   projectId,
+  preload,
 }: EditTaskModalProps) {
   const [formData, setFormData] = useState<UpdateTaskRequest>({
     title: task.title,
@@ -38,7 +44,9 @@ export function EditTaskModal({
     assignee_id: task.assignee_id || "",
   });
   const [columns, setColumns] = useState<Column[]>([]);
-  const [projectMembers, setProjectMembers] = useState<MemberWithUser[]>([]);
+  const [projectMembers, setProjectMembers] = useState<MemberWithUser[]>(
+    preload?.members || []
+  );
   const [loading, setLoading] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingColumns, setLoadingColumns] = useState(false);
@@ -76,11 +84,16 @@ export function EditTaskModal({
   }, [task.board_id]);
 
   useEffect(() => {
-    if (isOpen && projectId) {
+    if (!isOpen) return;
+    if (projectId && (!preload?.members || preload.members.length === 0)) {
       fetchProjectMembers();
-      fetchColumns();
     }
-  }, [isOpen, projectId, fetchProjectMembers, fetchColumns]);
+    if (!preload?.columns || preload.columns.length === 0) {
+      fetchColumns();
+    } else {
+      setColumns(preload.columns);
+    }
+  }, [isOpen, projectId, fetchProjectMembers, fetchColumns, preload]);
 
   useEffect(() => {
     // Update form data when task changes

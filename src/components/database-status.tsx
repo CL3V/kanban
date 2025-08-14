@@ -14,6 +14,8 @@ export default function DatabaseStatusIndicator() {
     status: "Loading",
   });
   const [lastCheck, setLastCheck] = useState<Date>(new Date());
+  // Avoid hydration mismatch by rendering time only after mount
+  const [mounted, setMounted] = useState(false);
 
   const checkDatabaseStatus = async () => {
     try {
@@ -44,6 +46,7 @@ export default function DatabaseStatusIndicator() {
   };
 
   useEffect(() => {
+    setMounted(true);
     // Check immediately
     checkDatabaseStatus();
 
@@ -112,7 +115,9 @@ export default function DatabaseStatusIndicator() {
 
             {/* Last Check Time */}
             <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-              Last check: {lastCheck.toLocaleTimeString()}
+              Last check:{" "}
+              {/* Render stable placeholder on SSR and first client render */}
+              {mounted ? lastCheck.toLocaleTimeString() : "—"}
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 import express from "express";
-import { projects, boards } from "../database/s3-db";
+import { v4 as uuidv4 } from "uuid";
+import { projects } from "../database/s3-db";
 import { CreateProjectRequest } from "../types";
 
 const router = express.Router();
@@ -7,13 +8,10 @@ const router = express.Router();
 // Get all projects
 router.get("/", async (req, res) => {
   try {
-    const allProjects = await projects.findAll();
-    // Sort by created_at descending (most recent first)
-    const sortedProjects = allProjects.sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    const result = await query(
+      "SELECT * FROM projects ORDER BY created_at DESC"
     );
-    res.json(sortedProjects);
+    res.json(result.rows);
   } catch (error) {
     console.error("Error fetching projects:", error);
     res.status(500).json({ error: "Failed to fetch projects" });
@@ -25,34 +23,14 @@ router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const project = await projects.findById(id);
-    if (!project) {
+    const result = await query("SELECT * FROM projects WHERE id = $1", [id]);
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: "Project not found" });
     }
-    res.json(project);
+    res.json(result.rows[0]);
   } catch (error) {
     console.error("Error fetching project:", error);
     res.status(500).json({ error: "Failed to fetch project" });
-  }
-});
-
-// Get boards for a specific project
-router.get("/:id/boards", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    // First verify project exists
-    const project = await projects.findById(id);
-    if (!project) {
-      return res.status(404).json({ error: "Project not found" });
-    }
-
-    // Get all boards for this project
-    const projectBoards = await boards.findByProjectId(id);
-    res.json(projectBoards);
-  } catch (error) {
-    console.error("Error fetching project boards:", error);
-    res.status(500).json({ error: "Failed to fetch project boards" });
   }
 });
 
@@ -68,14 +46,15 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "Project name is required" });
   }
 
-  try {
-    const newProject = await projects.create({
-      name,
-      description: description || "",
-      color,
-    });
+  const id = uuidv4();
 
-    res.status(201).json(newProject);
+  try {
+    const result = await query(
+      "INSERT INTO projects (id, name, description, color) VALUES ($1, $2, $3, $4) RETURNING *",
+      [id, name, description, color]
+    );
+
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error("Error creating project:", error);
     res.status(500).json({ error: "Failed to create project" });
@@ -88,17 +67,16 @@ router.put("/:id", async (req, res) => {
   const { name, description, color } = req.body;
 
   try {
-    const updatedProject = await projects.update(id, {
-      ...(name !== undefined && { name }),
-      ...(description !== undefined && { description }),
-      ...(color !== undefined && { color }),
-    });
+    const result = await query(
+      "UPDATE projects SET name = COALESCE($2, name), description = COALESCE($3, description), color = COALESCE($4, color), updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *",
+      [id, name, description, color]
+    );
 
-    if (!updatedProject) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: "Project not found" });
     }
 
-    res.json(updatedProject);
+    res.json(result.rows[0]);
   } catch (error) {
     console.error("Error updating project:", error);
     res.status(500).json({ error: "Failed to update project" });
@@ -110,9 +88,12 @@ router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const deleted = await projects.delete(id);
+    const result = await query(
+      "DELETE FROM projects WHERE id = $1 RETURNING id",
+      [id]
+    );
 
-    if (!deleted) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: "Project not found" });
     }
 

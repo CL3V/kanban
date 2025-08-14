@@ -88,8 +88,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(errorData, { status: response.status });
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    // Backend returns 204 No Content; normalize to JSON for the client
+    if (response.status === 204) {
+      return NextResponse.json({ success: true });
+    }
+
+    // Fallback in case backend returns a body
+    const data = await response.json().catch(() => ({}));
+    return NextResponse.json(
+      Object.keys(data).length ? data : { success: true }
+    );
   } catch (error) {
     console.error("Error deleting column:", error);
     return NextResponse.json(

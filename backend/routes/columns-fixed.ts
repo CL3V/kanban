@@ -23,9 +23,9 @@ router.get("/board/:boardId", async (req, res) => {
   try {
     const allColumns = await columns.findAll();
     const boardColumns = allColumns
-      .filter(column => column.board_id === boardId)
+      .filter((column) => column.board_id === boardId)
       .sort((a, b) => a.position - b.position);
-    
+
     res.json(boardColumns);
   } catch (error) {
     console.error("Error fetching board columns:", error);
@@ -62,7 +62,9 @@ router.post("/", async (req, res) => {
     let columnPosition = position;
     if (columnPosition === undefined || columnPosition === null) {
       const allColumns = await columns.findAll();
-      const boardColumns = allColumns.filter(col => col.board_id === board_id);
+      const boardColumns = allColumns.filter(
+        (col) => col.board_id === board_id
+      );
       columnPosition = boardColumns.length;
     }
 
@@ -71,9 +73,9 @@ router.post("/", async (req, res) => {
       name,
       board_id,
       position: columnPosition,
-      color: color || '#6B7280', // Default gray color
+      color: color || "#6B7280", // Default gray color
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     const column = await columns.create(newColumn);
@@ -100,7 +102,7 @@ router.put("/:id", async (req, res) => {
       name: name !== undefined ? name : existingColumn.name,
       position: position !== undefined ? position : existingColumn.position,
       color: color !== undefined ? color : existingColumn.color,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     const column = await columns.update(id, updatedColumn);
@@ -123,8 +125,8 @@ router.delete("/:id", async (req, res) => {
 
     // Delete all tasks in this column first
     const allTasks = await tasks.findAll();
-    const columnTasks = allTasks.filter(task => task.column_id === id);
-    await Promise.all(columnTasks.map(task => tasks.delete(task.id)));
+    const columnTasks = allTasks.filter((task) => task.column_id === id);
+    await Promise.all(columnTasks.map((task) => tasks.delete(task.id)));
 
     // Delete the column
     await columns.delete(id);
@@ -151,7 +153,7 @@ router.patch("/reorder", async (req, res) => {
         const updatedColumn = {
           ...column,
           position: index,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         };
         return columns.update(columnId, updatedColumn);
       }

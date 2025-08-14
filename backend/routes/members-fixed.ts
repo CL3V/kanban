@@ -31,7 +31,7 @@ router.post("/", async (req, res) => {
       email,
       avatar,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     const user = await users.create(newUser);
@@ -51,11 +51,11 @@ router.get("/project/:projectId", async (req, res) => {
     const allUsers = await users.findAll();
 
     // Join members with user data
-    const membersWithUsers = members.map(member => {
-      const user = allUsers.find(u => u.id === member.user_id);
+    const membersWithUsers = members.map((member) => {
+      const user = allUsers.find((u) => u.id === member.user_id);
       return {
         ...member,
-        user: user || null
+        user: user || null,
       };
     });
 
@@ -84,10 +84,12 @@ router.post("/project/:projectId", async (req, res) => {
 
     // Check if membership already exists
     const existingMembers = await projectMembers.findByProjectId(projectId);
-    const existingMember = existingMembers.find(m => m.user_id === userId);
-    
+    const existingMember = existingMembers.find((m) => m.user_id === userId);
+
     if (existingMember) {
-      return res.status(409).json({ error: "User is already a member of this project" });
+      return res
+        .status(409)
+        .json({ error: "User is already a member of this project" });
     }
 
     const newMember: ProjectMember = {
@@ -96,13 +98,13 @@ router.post("/project/:projectId", async (req, res) => {
       user_id: userId,
       role,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     const member = await projectMembers.create(newMember);
     res.status(201).json({
       ...member,
-      user
+      user,
     });
   } catch (error) {
     console.error("Error adding project member:", error);
@@ -122,7 +124,7 @@ router.put("/project/:projectId/user/:userId", async (req, res) => {
 
     // Find the member
     const members = await projectMembers.findByProjectId(projectId);
-    const member = members.find(m => m.user_id === userId);
+    const member = members.find((m) => m.user_id === userId);
 
     if (!member) {
       return res.status(404).json({ error: "Member not found" });
@@ -131,7 +133,7 @@ router.put("/project/:projectId/user/:userId", async (req, res) => {
     const updatedMember = {
       ...member,
       role,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     const result = await projectMembers.update(member.id, updatedMember);
@@ -139,7 +141,7 @@ router.put("/project/:projectId/user/:userId", async (req, res) => {
 
     res.json({
       ...result,
-      user
+      user,
     });
   } catch (error) {
     console.error("Error updating project member:", error);
@@ -154,7 +156,7 @@ router.delete("/project/:projectId/user/:userId", async (req, res) => {
   try {
     // Find the member
     const members = await projectMembers.findByProjectId(projectId);
-    const member = members.find(m => m.user_id === userId);
+    const member = members.find((m) => m.user_id === userId);
 
     if (!member) {
       return res.status(404).json({ error: "Member not found" });
@@ -200,7 +202,7 @@ router.put("/:id", async (req, res) => {
       name: name !== undefined ? name : existingUser.name,
       email: email !== undefined ? email : existingUser.email,
       avatar: avatar !== undefined ? avatar : existingUser.avatar,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     const user = await users.update(id, updatedUser);

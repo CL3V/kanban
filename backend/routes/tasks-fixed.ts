@@ -12,9 +12,9 @@ router.get("/board/:boardId", async (req, res) => {
   try {
     const allTasks = await tasks.findAll();
     const boardTasks = allTasks
-      .filter(task => task.board_id === boardId)
+      .filter((task) => task.board_id === boardId)
       .sort((a, b) => a.position - b.position);
-    
+
     res.json(boardTasks);
   } catch (error) {
     console.error("Error fetching tasks:", error);
@@ -29,9 +29,9 @@ router.get("/column/:columnId", async (req, res) => {
   try {
     const allTasks = await tasks.findAll();
     const columnTasks = allTasks
-      .filter(task => task.column_id === columnId)
+      .filter((task) => task.column_id === columnId)
       .sort((a, b) => a.position - b.position);
-    
+
     res.json(columnTasks);
   } catch (error) {
     console.error("Error fetching column tasks:", error);
@@ -58,17 +58,27 @@ router.get("/:id", async (req, res) => {
 // Create a new task
 router.post("/", async (req, res) => {
   try {
-    const { title, description, board_id, column_id, priority = "medium", assignee_id, position } = req.body;
+    const {
+      title,
+      description,
+      board_id,
+      column_id,
+      priority = "medium",
+      assignee_id,
+      position,
+    } = req.body;
 
     if (!title || !board_id || !column_id) {
-      return res.status(400).json({ error: "Title, board_id, and column_id are required" });
+      return res
+        .status(400)
+        .json({ error: "Title, board_id, and column_id are required" });
     }
 
     // If position not provided, set it to the end of the column
     let taskPosition = position;
     if (taskPosition === undefined || taskPosition === null) {
       const allTasks = await tasks.findAll();
-      const columnTasks = allTasks.filter(t => t.column_id === column_id);
+      const columnTasks = allTasks.filter((t) => t.column_id === column_id);
       taskPosition = columnTasks.length;
     }
 
@@ -82,7 +92,7 @@ router.post("/", async (req, res) => {
       assignee_id,
       position: taskPosition,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     const task = await tasks.create(newTask);
@@ -96,7 +106,8 @@ router.post("/", async (req, res) => {
 // Update task
 router.put("/:id", async (req, res) => {
   const { id } = req.params;
-  const { title, description, priority, assignee_id, position, column_id } = req.body;
+  const { title, description, priority, assignee_id, position, column_id } =
+    req.body;
 
   try {
     const existingTask = await tasks.findById(id);
@@ -107,12 +118,14 @@ router.put("/:id", async (req, res) => {
     const updatedTask = {
       ...existingTask,
       title: title !== undefined ? title : existingTask.title,
-      description: description !== undefined ? description : existingTask.description,
+      description:
+        description !== undefined ? description : existingTask.description,
       priority: priority !== undefined ? priority : existingTask.priority,
-      assignee_id: assignee_id !== undefined ? assignee_id : existingTask.assignee_id,
+      assignee_id:
+        assignee_id !== undefined ? assignee_id : existingTask.assignee_id,
       position: position !== undefined ? position : existingTask.position,
       column_id: column_id !== undefined ? column_id : existingTask.column_id,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     const task = await tasks.update(id, updatedTask);
@@ -148,7 +161,9 @@ router.patch("/:id/move", async (req, res) => {
 
   try {
     if (column_id === undefined || position === undefined) {
-      return res.status(400).json({ error: "column_id and position are required" });
+      return res
+        .status(400)
+        .json({ error: "column_id and position are required" });
     }
 
     const existingTask = await tasks.findById(id);
@@ -160,7 +175,7 @@ router.patch("/:id/move", async (req, res) => {
       ...existingTask,
       column_id,
       position,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     const task = await tasks.update(id, updatedTask);
@@ -188,7 +203,7 @@ router.patch("/column/:columnId/reorder", async (req, res) => {
         const updatedTask = {
           ...task,
           position: index,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         };
         return tasks.update(taskId, updatedTask);
       }

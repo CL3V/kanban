@@ -11,7 +11,9 @@ router.get("/project/:projectId", async (req, res) => {
 
   try {
     const allBoards = await boards.findAll();
-    const projectBoards = allBoards.filter(board => board.project_id === projectId);
+    const projectBoards = allBoards.filter(
+      (board) => board.project_id === projectId
+    );
     res.json(projectBoards);
   } catch (error) {
     console.error("Error fetching boards:", error);
@@ -41,7 +43,9 @@ router.post("/", async (req, res) => {
     const { name, description, project_id }: CreateBoardRequest = req.body;
 
     if (!name || !project_id) {
-      return res.status(400).json({ error: "Name and project_id are required" });
+      return res
+        .status(400)
+        .json({ error: "Name and project_id are required" });
     }
 
     const newBoard: Board = {
@@ -50,7 +54,7 @@ router.post("/", async (req, res) => {
       description,
       project_id,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     const board = await boards.create(newBoard);
@@ -75,8 +79,9 @@ router.put("/:id", async (req, res) => {
     const updatedBoard = {
       ...existingBoard,
       name: name !== undefined ? name : existingBoard.name,
-      description: description !== undefined ? description : existingBoard.description,
-      updated_at: new Date().toISOString()
+      description:
+        description !== undefined ? description : existingBoard.description,
+      updated_at: new Date().toISOString(),
     };
 
     const board = await boards.update(id, updatedBoard);
@@ -99,13 +104,13 @@ router.delete("/:id", async (req, res) => {
 
     // Delete all tasks in this board first
     const allTasks = await tasks.findAll();
-    const boardTasks = allTasks.filter(task => task.board_id === id);
-    await Promise.all(boardTasks.map(task => tasks.delete(task.id)));
+    const boardTasks = allTasks.filter((task) => task.board_id === id);
+    await Promise.all(boardTasks.map((task) => tasks.delete(task.id)));
 
     // Delete all columns in this board
     const allColumns = await columns.findAll();
-    const boardColumns = allColumns.filter(column => column.board_id === id);
-    await Promise.all(boardColumns.map(column => columns.delete(column.id)));
+    const boardColumns = allColumns.filter((column) => column.board_id === id);
+    await Promise.all(boardColumns.map((column) => columns.delete(column.id)));
 
     // Delete the board
     await boards.delete(id);
@@ -127,7 +132,7 @@ router.get("/:id/tasks", async (req, res) => {
     }
 
     const allTasks = await tasks.findAll();
-    const boardTasks = allTasks.filter(task => task.board_id === id);
+    const boardTasks = allTasks.filter((task) => task.board_id === id);
     res.json(boardTasks);
   } catch (error) {
     console.error("Error fetching board tasks:", error);

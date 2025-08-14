@@ -1,96 +1,169 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  useReducer,
+} from "react";
 import { useParams } from "next/navigation";
 import {
   DndContext,
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
   closestCorners,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+// (Sortable utilities are handled inside KanbanColumn)
 import { Project, Board, Task, Column } from "@/types";
 import { ApiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { KanbanSkeleton } from "@/components/ui/skeleton";
-import { KanbanColumn } from "@/components/kanban-column";
-import { TaskCard } from "@/components/task-card";
-import { CreateTaskModal } from "@/components/create-task-modal";
-import { EditTaskModal } from "@/components/edit-task-modal";
-import { CreateColumnModal } from "@/components/create-column-modal";
+import dynamic from "next/dynamic";
 import {
-  ArrowLeft,
+  ChevronLeft,
   Filter,
   Search,
-  Users,
   Settings,
   Trash2,
   Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import { EditBoardModal } from "@/components/edit-board-modal";
 
-// Fallback columns for when API is not available
-const COLUMNS = [
+// Lazy-loaded client components to reduce initial bundle size
+const KanbanColumn = dynamic(
+  () => import("@/components/kanban-column").then((m) => m.KanbanColumn),
   {
-    id: "todo",
-    title: "To Do",
-    color:
-      "bg-gray-50 border-gray-200 dark:bg-slate-800/50 dark:border-slate-600",
-    headerColor: "text-gray-800 dark:text-gray-200",
-  },
-  {
-    id: "in-progress",
-    title: "In Progress",
-    color:
-      "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700",
-    headerColor: "text-blue-800 dark:text-blue-300",
-  },
-  {
-    id: "in-review",
-    title: "In Review",
-    color:
-      "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700",
-    headerColor: "text-amber-800 dark:text-amber-300",
-  },
-  {
-    id: "done",
-    title: "Done",
-    color:
-      "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700",
-    headerColor: "text-green-800 dark:text-green-300",
-  },
-] as const;
+    ssr: false,
+    loading: () => (
+      <div className="w-80 flex-shrink-0 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-4 h-[400px] animate-pulse" />
+    ),
+  }
+);
+
+const TaskCard = dynamic(
+  () => import("@/components/task-card").then((m) => m.TaskCard),
+  { ssr: false }
+);
+
+const CreateTaskModal = dynamic(
+  () => import("@/components/create-task-modal").then((m) => m.CreateTaskModal),
+  { ssr: false }
+);
+
+const EditTaskModal = dynamic(
+  () => import("@/components/edit-task-modal").then((m) => m.EditTaskModal),
+  { ssr: false }
+);
+
+const CreateColumnModal = dynamic(
+  () =>
+    import("@/components/create-column-modal").then((m) => m.CreateColumnModal),
+  { ssr: false }
+);
 
 export default function BoardPage() {
   const params = useParams();
   const projectId = params.id as string;
   const boardId = params.boardId as string;
 
-  const [project, setProject] = useState<Project | null>(null);
-  const [board, setBoard] = useState<Board | null>(null);
-  const [columns, setColumns] = useState<Column[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  type State = {
+    project: Project | null;
+    board: Board | null;
+    columns: Column[];
+    tasks: Task[];
+    loading: boolean;
+    error: string | null;
+  };
+
+  type Action =
+    | { type: "LOAD_START" }
+    | {
+        type: "LOAD_SUCCESS";
+        payload: {
+          project: Project;
+          board: Board;
+          columns: Column[];
+          tasks: Task[];
+        };
+      }
+    | { type: "LOAD_ERROR"; payload: string }
+    | { type: "SET_TASKS"; payload: Task[] }
+    | { type: "SET_COLUMNS"; payload: Column[] };
+
+  const initialState: State = {
+    project: null,
+    board: null,
+    columns: [],
+    tasks: [],
+    loading: true,
+    error: null,
+  };
+
+  function reducer(state: State, action: Action): State {
+    switch (action.type) {
+      case "LOAD_START":
+        return { ...state, loading: true, error: null };
+      case "LOAD_SUCCESS":
+        return {
+          ...state,
+          loading: false,
+          error: null,
+          project: action.payload.project,
+          board: action.payload.board,
+          columns: action.payload.columns,
+          tasks: action.payload.tasks,
+        };
+      case "LOAD_ERROR":
+        return { ...state, loading: false, error: action.payload };
+      case "SET_TASKS":
+        return { ...state, tasks: action.payload };
+      case "SET_COLUMNS":
+        return { ...state, columns: action.payload };
+      default:
+        return state;
+    }
+  }
+
+  const [{ project, board, columns, tasks, loading, error }, dispatch] =
+    useReducer(reducer, initialState);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [createTaskColumnId, setCreateTaskColumnId] = useState<string>("");
   const [isCreateColumnModalOpen, setIsCreateColumnModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  type MemberWithUser = import("@/types").ProjectMember & {
+    user: import("@/types").User;
+  };
+  const [preloadForModal, setPreloadForModal] = useState<{
+    members?: MemberWithUser[];
+    columns?: Column[];
+  }>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<string[]>([]);
   const [filterAssignee, setFilterAssignee] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [isEditBoardOpen, setIsEditBoardOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+
+  // Configure sensors so dragging starts quickly without long-press
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      // Small movement activates drag; no press delay required
+      activationConstraint: { distance: 3 },
+    })
+  );
 
   const loadBoardData = useCallback(async () => {
     try {
-      setLoading(true);
+      dispatch({ type: "LOAD_START" });
       const [projectData, boardData, columnsData, tasksData] =
         await Promise.all([
           ApiClient.getProject(projectId),
@@ -98,16 +171,23 @@ export default function BoardPage() {
           ApiClient.getColumns(boardId),
           ApiClient.getTasks(boardId),
         ]);
-      setProject(projectData as Project);
-      setBoard(boardData as Board);
-      setColumns(columnsData as Column[]);
-      setTasks(tasksData as Task[]);
+      dispatch({
+        type: "LOAD_SUCCESS",
+        payload: {
+          project: projectData as Project,
+          board: boardData as Board,
+          columns: columnsData as Column[],
+          tasks: tasksData as Task[],
+        },
+      });
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load board data"
-      );
+      dispatch({
+        type: "LOAD_ERROR",
+        payload:
+          err instanceof Error ? err.message : "Failed to load board data",
+      });
     } finally {
-      setLoading(false);
+      // loading handled via reducer
     }
   }, [projectId, boardId]);
 
@@ -135,9 +215,9 @@ export default function BoardPage() {
     }
   }, [showFilters]);
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string);
-  };
+  }, []);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -177,7 +257,7 @@ export default function BoardPage() {
     const newTasks = tasks.map((task) =>
       task.id === activeTask.id ? { ...task, column_id: overColumnId } : task
     );
-    setTasks(newTasks);
+    dispatch({ type: "SET_TASKS", payload: newTasks });
 
     try {
       // Update task column and position on backend
@@ -195,37 +275,39 @@ export default function BoardPage() {
       await ApiClient.updateTask(activeTask.id, updateData);
     } catch (err) {
       // Revert on error
-      setTasks(tasks);
+      dispatch({ type: "SET_TASKS", payload: tasks });
       console.error("Failed to update task:", err);
     }
   };
 
-  const handleCreateTask = (columnId: string) => {
+  const handleCreateTask = useCallback((columnId: string) => {
     setCreateTaskColumnId(columnId);
     setIsCreateTaskModalOpen(true);
-  };
+  }, []);
 
   const handleEditTask = (task: Task) => {
+    // Preload columns from current state; members will still be fetched inside if not provided
+    setPreloadForModal({ columns });
     setEditingTask(task);
   };
 
-  const handleTaskCreated = () => {
+  const handleTaskCreated = useCallback(() => {
     loadBoardData();
-  };
+  }, [loadBoardData]);
 
-  const handleTaskUpdated = () => {
+  const handleTaskUpdated = useCallback(() => {
     loadBoardData();
     setEditingTask(null);
-  };
+  }, [loadBoardData]);
 
-  const handleTaskDeleted = () => {
+  const handleTaskDeleted = useCallback(() => {
     loadBoardData();
     setEditingTask(null);
-  };
+  }, [loadBoardData]);
 
-  const handleColumnCreated = () => {
+  const handleColumnCreated = useCallback(() => {
     loadBoardData();
-  };
+  }, [loadBoardData]);
 
   const handleDeleteColumn = async (columnId: string) => {
     if (
@@ -245,11 +327,7 @@ export default function BoardPage() {
     }
   };
 
-  const getTasksByStatus = (status: string) => {
-    return filteredTasks
-      .filter((task) => task.column_id === status)
-      .sort((a, b) => a.position - b.position);
-  };
+  // Note: grouping tasks by status is handled inline per column
 
   const handleDeleteBoard = async () => {
     if (
@@ -270,25 +348,29 @@ export default function BoardPage() {
     }
   };
 
-  const filteredTasks = tasks.filter((task) => {
-    // Search filter
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (task.description &&
-        task.description.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredTasks = useMemo(
+    () =>
+      tasks.filter((task) => {
+        // Search filter
+        const matchesSearch =
+          task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (task.description &&
+            task.description.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    // Priority filter
-    const matchesPriority =
-      filterPriority.length === 0 || filterPriority.includes(task.priority);
+        // Priority filter
+        const matchesPriority =
+          filterPriority.length === 0 || filterPriority.includes(task.priority);
 
-    // Assignee filter
-    const matchesAssignee =
-      filterAssignee.length === 0 ||
-      (task.assignee_id && filterAssignee.includes(task.assignee_id)) ||
-      (filterAssignee.includes("unassigned") && !task.assignee_id);
+        // Assignee filter
+        const matchesAssignee =
+          filterAssignee.length === 0 ||
+          (task.assignee_id && filterAssignee.includes(task.assignee_id)) ||
+          (filterAssignee.includes("unassigned") && !task.assignee_id);
 
-    return matchesSearch && matchesPriority && matchesAssignee;
-  });
+        return matchesSearch && matchesPriority && matchesAssignee;
+      }),
+    [tasks, searchQuery, filterPriority, filterAssignee]
+  );
 
   if (loading) {
     return (
@@ -326,8 +408,7 @@ export default function BoardPage() {
         <p className="text-red-600 mb-4">{error || "Board not found"}</p>
         <Link href={`/projects/${projectId}`}>
           <Button variant="outline">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Project
+            <ChevronLeft className="w-8 h-8 mr-2" />
           </Button>
         </Link>
       </div>
@@ -336,8 +417,8 @@ export default function BoardPage() {
 
   return (
     <div className="h-screen flex flex-col">
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 px-6 py-4 shadow-sm flex-shrink-0">
-        <div className="max-w-7xl mx-auto">
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 px-6 py-4 shadow-sm flex-shrink-0 relative">
+        <div className="mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href={`/projects/${projectId}`}>
@@ -346,8 +427,7 @@ export default function BoardPage() {
                   size="sm"
                   className="hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to {project.name}
+                  <ChevronLeft className="w-8 h-8 mr-2" />
                 </Button>
               </Link>
               <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
@@ -390,7 +470,7 @@ export default function BoardPage() {
                 </Button>
                 {/* Filter Dropdown */}
                 {showFilters && (
-                  <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 p-4">
+                  <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg  p-4">
                     <div className="space-y-4">
                       <div>
                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
@@ -521,14 +601,7 @@ export default function BoardPage() {
                 variant="outline"
                 size="sm"
                 className="border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 bg-white/80 dark:bg-slate-800/80"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Share
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 bg-white/80 dark:bg-slate-800/80"
+                onClick={() => setIsEditBoardOpen(true)}
               >
                 <Settings className="w-4 h-4" />
               </Button>
@@ -548,70 +621,52 @@ export default function BoardPage() {
       {/* Board Content */}
       <div className="flex-1 overflow-hidden">
         <DndContext
+          sensors={sensors}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           collisionDetection={closestCorners}
         >
-          <div className="h-full overflow-x-auto">
-            <div className="max-w-7xl mx-auto">
-              <div className="flex gap-6 p-6 min-w-max h-[calc(100vh-180px)]">
-                {/* Render existing columns */}
-                {columns.length > 0
-                  ? columns.map((column) => {
-                      const columnTasks = tasks.filter(
-                        (task) => task.column_id === column.id
-                      );
-                      return (
-                        <SortableContext
-                          key={column.id}
-                          items={columnTasks.map((task) => task.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <KanbanColumn
-                            id={column.id}
-                            title={column.name}
-                            headerColor="text-gray-800 dark:text-gray-200"
-                            tasks={columnTasks}
-                            onCreateTask={() => handleCreateTask(column.id)}
-                            onEditTask={handleEditTask}
-                            onDeleteColumn={handleDeleteColumn}
-                          />
-                        </SortableContext>
-                      );
-                    })
-                  : /* Fallback to default columns if API not working */
-                    COLUMNS.map((column) => {
-                      const columnTasks = getTasksByStatus(column.id);
-                      return (
-                        <SortableContext
-                          key={column.id}
-                          items={columnTasks.map((task) => task.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <KanbanColumn
-                            id={column.id}
-                            title={column.title}
-                            headerColor={column.headerColor}
-                            tasks={columnTasks}
-                            onCreateTask={() => handleCreateTask(column.id)}
-                            onEditTask={handleEditTask}
-                            onDeleteColumn={handleDeleteColumn}
-                          />
-                        </SortableContext>
-                      );
-                    })}
-
-                {/* Create Column Button */}
-                <div className="w-80 flex-shrink-0">
-                  <Button
-                    variant="outline"
-                    className="w-full h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100/50 dark:hover:bg-slate-700/50 transition-colors"
-                    onClick={() => setIsCreateColumnModalOpen(true)}
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add Column
-                  </Button>
+          <div
+            className="h-[calc(100vh-180px)] overflow-x-scroll overflow-y-hidden scrollbar-thin scrollbar-thumb-brand scrollbar-track-brand scrollbar-color-brand"
+            style={{ scrollbarGutter: "stable both-edges" }}
+          >
+            <div className="flex gap-6 p-6 min-w-max h-full">
+              {columns.length > 0 ? (
+                columns.map((column) => {
+                  const columnTasks = filteredTasks.filter(
+                    (task) => task.column_id === column.id
+                  );
+                  return (
+                    <KanbanColumn
+                      key={column.id}
+                      id={column.id}
+                      title={column.name}
+                      headerColor="text-gray-800 dark:text-gray-200"
+                      accentColor={column.color}
+                      tasks={columnTasks}
+                      onCreateTask={handleCreateTask}
+                      onEditTask={handleEditTask}
+                      onDeleteColumn={handleDeleteColumn}
+                    />
+                  );
+                })
+              ) : (
+                <div className="w-80 flex-shrink-0 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-4 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                  No columns yet. Click &quot;Add Column&quot; to create your
+                  first one.
                 </div>
+              )}
+
+              {/* Create Column Button */}
+              <div className="w-80 flex-shrink-0">
+                <Button
+                  variant="outline"
+                  className="w-full h-20 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100/50 dark:hover:bg-slate-700/50 transition-colors"
+                  onClick={() => setIsCreateColumnModalOpen(true)}
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Add Column
+                </Button>
               </div>
             </div>
           </div>
@@ -653,8 +708,16 @@ export default function BoardPage() {
           onDelete={handleTaskDeleted}
           task={editingTask}
           projectId={projectId}
+          preload={preloadForModal}
         />
       )}
+
+      <EditBoardModal
+        isOpen={isEditBoardOpen}
+        onClose={() => setIsEditBoardOpen(false)}
+        onSuccess={loadBoardData}
+        board={board}
+      />
     </div>
   );
 }

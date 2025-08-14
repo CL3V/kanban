@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +14,6 @@ import {
   ArrowUp,
   ArrowDown,
   Minus,
-  GripVertical,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -54,7 +54,7 @@ const PRIORITY_CONFIG = {
   },
 };
 
-export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
+function TaskCardBase({ task, onEdit, isDragging }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -85,7 +85,8 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="cursor-default"
+      {...listeners}
+      className="cursor-grab active:cursor-grabbing"
     >
       <Card
         className={`hover:shadow-lg transition-all duration-200 border-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-md hover:shadow-xl hover:-translate-y-0.5 ${
@@ -95,28 +96,24 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
         }`}
       >
         <CardContent className="p-4 relative">
-          {/* Drag handle - positioned at the top right */}
-          <div
-            {...listeners}
-            className="absolute top-2 right-2 cursor-grab active:cursor-grabbing z-20 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            title="Drag to move task"
-          >
-            <GripVertical className="w-3 h-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300" />
+          {/* Top-right controls: Details */}
+          <div className="absolute top-2 right-2 z-20 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onEdit(task);
+              }}
+              className="px-2 py-1 text-[10px] rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+              title="Open task details"
+            >
+              Details
+            </button>
           </div>
 
-          {/* Click overlay for editing - covers the main content area */}
-          <div
-            className="absolute inset-0 cursor-pointer z-10 rounded-lg pr-8"
-            onClick={(e: React.MouseEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onEdit(task);
-            }}
-            title="Click to edit task"
-          />
-
-          {/* Task content - positioned below the click overlay */}
-          <div className="relative z-0 pointer-events-none pr-6">
+          {/* Task content */}
+          <div className="relative z-0">
             {/* Task Title */}
             <h3 className="font-semibold text-gray-900 dark:text-white mb-2 leading-snug">
               {task.title}
@@ -124,7 +121,7 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
 
             {/* Task Description */}
             {task.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 whitespace-pre-line break-words line-clamp-4">
                 {task.description}
               </p>
             )}
@@ -168,7 +165,7 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
                 </div>
               </div>
 
-              {/* Due date and assignee */}
+              {/* Due date + assignee (bottom-right) */}
               <div className="flex items-center gap-2">
                 {task.dueDate && (
                   <div className="flex items-center gap-1">
@@ -184,9 +181,14 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
                     </span>
                   </div>
                 )}
-
-                {/* Assignee Avatar (placeholder) */}
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
+                <div
+                  className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm"
+                  title={
+                    task.assignee_id
+                      ? `Assignee: ${task.assignee_id}`
+                      : "Unassigned"
+                  }
+                >
                   <User className="w-3 h-3 text-white" />
                 </div>
               </div>
@@ -198,3 +200,17 @@ export function TaskCard({ task, onEdit, isDragging }: TaskCardProps) {
     </div>
   );
 }
+
+function areEqual(prev: TaskCardProps, next: TaskCardProps) {
+  return (
+    prev.isDragging === next.isDragging &&
+    prev.task.id === next.task.id &&
+    prev.task.title === next.task.title &&
+    prev.task.description === next.task.description &&
+    prev.task.priority === next.task.priority &&
+    prev.task.position === next.task.position &&
+    prev.task.column_id === next.task.column_id
+  );
+}
+
+export const TaskCard = memo(TaskCardBase, areEqual);

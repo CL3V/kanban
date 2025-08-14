@@ -13,19 +13,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { ProjectMembers } from "@/components/project-members";
 import {
-  ArrowLeft,
+  ChevronLeft,
   Plus,
   LayoutGrid,
   Calendar,
   MoreVertical,
   Edit,
   Trash2,
+  Users,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { CreateBoardModal } from "@/components/create-board-modal";
+import { EditBoardModal } from "@/components/edit-board-modal";
 
 export default function ProjectPage() {
   const params = useParams();
@@ -36,7 +37,8 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateBoardModalOpen, setIsCreateBoardModalOpen] = useState(false);
-  const [refreshTrigger] = useState(0);
+  const [isEditBoardOpen, setIsEditBoardOpen] = useState(false);
+  const [selectedBoard, setSelectedBoard] = useState<Board | null>(null);
   const [deletingBoard, setDeletingBoard] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -86,6 +88,11 @@ export default function ProjectPage() {
     loadProjectData(); // Refresh the boards list
   };
 
+  const handleEditBoard = (board: Board) => {
+    setSelectedBoard(board);
+    setIsEditBoardOpen(true);
+  };
+
   const handleDeleteBoard = async (boardId: string, boardName: string) => {
     if (
       !confirm(
@@ -125,8 +132,7 @@ export default function ProjectPage() {
         <p className="text-red-600 mb-4">{error || "Project not found"}</p>
         <Link href="/">
           <Button variant="outline">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Projects
+            <ChevronLeft className="w-8 h-8 mr-2" />
           </Button>
         </Link>
       </div>
@@ -134,14 +140,13 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">
               <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Projects
+                <ChevronLeft className="w-8 h-8 mr-2" />
               </Button>
             </Link>
             <div className="flex items-center gap-3">
@@ -157,10 +162,18 @@ export default function ProjectPage() {
               </div>
             </div>
           </div>
-          <Button onClick={handleCreateBoard}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Board
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href={`/projects/${projectId}/members`}>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Users className="w-4 h-4" />
+                Members
+              </Button>
+            </Link>
+            <Button size="sm" onClick={handleCreateBoard} className="gap-2">
+              <Plus className="w-4 h-4" />
+              New Board
+            </Button>
+          </div>
         </div>
 
         {/* Project Stats */}
@@ -204,8 +217,7 @@ export default function ProjectPage() {
           </Card>
         </div>
 
-        {/* Project Members */}
-        <ProjectMembers projectId={projectId} refreshTrigger={refreshTrigger} />
+        {/* Members moved to dedicated page; use the header button to navigate */}
 
         {/* Boards */}
         <div>
@@ -265,7 +277,7 @@ export default function ProjectPage() {
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                // TODO: Add edit board functionality
+                                handleEditBoard(board);
                                 setOpenDropdown(null);
                               }}
                             >
@@ -318,6 +330,12 @@ export default function ProjectPage() {
           onClose={() => setIsCreateBoardModalOpen(false)}
           onSuccess={handleBoardCreated}
           projectId={projectId}
+        />
+        <EditBoardModal
+          isOpen={isEditBoardOpen}
+          onClose={() => setIsEditBoardOpen(false)}
+          onSuccess={loadProjectData}
+          board={selectedBoard}
         />
       </div>
     </div>

@@ -11,9 +11,12 @@ import {
   Crown,
   Shield,
   User as UserIcon,
+  ChevronDown,
+  X,
 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import Image from "next/image";
+import { Input } from "@/components/ui/input";
 
 interface ProjectMembersProps {
   projectId: string;
@@ -34,6 +37,9 @@ export function ProjectMembers({
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [removingMember, setRemovingMember] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [open, setOpen] = useState(true);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const fetchData = useCallback(async () => {
     try {
@@ -127,9 +133,38 @@ export function ProjectMembers({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-          Project Team ({members.length})
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">
+            Project Team{" "}
+            <span className="text-gray-500 dark:text-gray-400">
+              ({members.length})
+            </span>
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => setIsAddOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" /> Add people
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-controls="members-section"
+              className="border-gray-200 dark:border-gray-700 flex items-center gap-1"
+            >
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${
+                  open ? "rotate-180" : "rotate-0"
+                }`}
+              />
+              Team
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -140,7 +175,7 @@ export function ProjectMembers({
           <div className="space-y-4">
             {/* Current Members */}
             {members.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-3" id="members-section" hidden={!open}>
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Current Members
                 </h4>
@@ -217,14 +252,65 @@ export function ProjectMembers({
               </div>
             )}
 
-            {/* Add New Members */}
-            {availableUsers.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Add Team Members
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {availableUsers.map((user) => (
+            {availableUsers.length === 0 && members.length === 0 && (
+              <div className="text-center py-8">
+                <UserIcon className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  No team members yet
+                </p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">
+                  Add people to your workspace first, then assign them to this
+                  project
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded dark:bg-red-900/30 dark:border-red-800 dark:text-red-300">
+            {error}
+          </div>
+        )}
+      </CardContent>
+
+      {/* Add People Dialog */}
+      {isAddOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-800">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                Add people to project
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAddOpen(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <Input
+                  placeholder="Search people..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700"
+                />
+              </div>
+              <div
+                className="max-h-80 overflow-y-auto space-y-2 pr-1"
+                style={{ scrollbarWidth: "thin" }}
+              >
+                {availableUsers
+                  .filter((u) =>
+                    (u.name + " " + u.email)
+                      .toLowerCase()
+                      .includes(search.toLowerCase())
+                  )
+                  .map((user) => (
                     <div
                       key={user.id}
                       className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50"
@@ -261,7 +347,9 @@ export function ProjectMembers({
                       </div>
                       <Button
                         size="sm"
-                        onClick={() => handleAddMember(user.id)}
+                        onClick={async () => {
+                          await handleAddMember(user.id);
+                        }}
                         disabled={isAddingMember}
                         className="flex items-center gap-1"
                       >
@@ -270,31 +358,25 @@ export function ProjectMembers({
                       </Button>
                     </div>
                   ))}
-                </div>
+                {availableUsers.filter((u) =>
+                  (u.name + " " + u.email)
+                    .toLowerCase()
+                    .includes(search.toLowerCase())
+                ).length === 0 && (
+                  <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-6">
+                    No people to add.
+                  </div>
+                )}
               </div>
-            )}
-
-            {availableUsers.length === 0 && members.length === 0 && (
-              <div className="text-center py-8">
-                <UserIcon className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  No team members yet
-                </p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">
-                  Add people to your workspace first, then assign them to this
-                  project
-                </p>
-              </div>
-            )}
+            </div>
+            <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-800 flex justify-end">
+              <Button variant="outline" onClick={() => setIsAddOpen(false)}>
+                Done
+              </Button>
+            </div>
           </div>
-        )}
-
-        {error && (
-          <div className="mt-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded dark:bg-red-900/30 dark:border-red-800 dark:text-red-300">
-            {error}
-          </div>
-        )}
-      </CardContent>
+        </div>
+      )}
     </Card>
   );
 }

@@ -1,4 +1,9 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+// If pointing to an external backend (e.g., http://localhost:3001),
+// append "/api" to match backend route prefix. Otherwise default to Next.js local "/api".
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "")}/api`
+  : "/api";
+const IS_EXTERNAL_API = /^https?:\/\//i.test(API_BASE_URL);
 
 export class ApiClient {
   private static async request<T>(
@@ -24,7 +29,14 @@ export class ApiClient {
       );
     }
 
-    return response.json();
+    // Normalize empty responses (e.g., 204 No Content)
+    if (response.status === 204) {
+      return {} as T;
+    }
+
+    // Some backends may send no body with 200; guard JSON parse
+    const text = await response.text();
+    return text ? JSON.parse(text) : ({} as T);
   }
 
   // Projects
@@ -77,7 +89,8 @@ export class ApiClient {
     name: string;
     description?: string;
   }) {
-    return this.request(`/projects/${data.project_id}/boards`, {
+    // Backend expects POST /boards with body containing project_id
+    return this.request(`/boards`, {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -116,7 +129,8 @@ export class ApiClient {
     priority?: string;
     assignee_id?: string;
   }) {
-    return this.request(`/boards/${data.board_id}/tasks`, {
+    // Backend accepts task creation at POST /tasks (not under /boards/:id)
+    return this.request(`/tasks`, {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -163,7 +177,8 @@ export class ApiClient {
 
   // Project Members
   static async getProjectMembers(projectId: string) {
-    return this.request(`/projects/${projectId}/members`);
+    // Backend route: GET /api/members/project/:projectId
+    return this.request(`/members/project/${projectId}`);
   }
 
   static async addProjectMember(
@@ -173,14 +188,17 @@ export class ApiClient {
       role?: string;
     }
   ) {
-    return this.request(`/projects/${projectId}/members`, {
+    // Backend route: POST /api/members/project/:projectId with { userId, role }
+    const payload = { userId: data.user_id, role: data.role };
+    return this.request(`/members/project/${projectId}`, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   }
 
   static async removeProjectMember(projectId: string, userId: string) {
-    return this.request(`/projects/${projectId}/members/${userId}`, {
+    // Backend route: DELETE /api/members/project/:projectId/user/:userId
+    return this.request(`/members/project/${projectId}/user/${userId}`, {
       method: "DELETE",
     });
   }
@@ -209,14 +227,18 @@ export class ApiClient {
       position?: number;
     }
   ) {
-    return this.request(`/columns/${id}`, {
+    // When using Next.js local API, the proxy expects an id query param
+    const endpoint = IS_EXTERNAL_API ? `/columns/${id}` : `/columns?id=${id}`;
+    return this.request(endpoint, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   static async deleteColumn(id: string) {
-    return this.request(`/columns?id=${id}`, {
+    // Use path param when talking to backend directly; query when using Next proxy
+    const endpoint = IS_EXTERNAL_API ? `/columns/${id}` : `/columns?id=${id}`;
+    return this.request(endpoint, {
       method: "DELETE",
     });
   }

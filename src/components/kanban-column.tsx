@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -16,16 +17,18 @@ interface KanbanColumnProps {
   id: string;
   title: string;
   headerColor: string;
+  accentColor?: string;
   tasks: Task[];
-  onCreateTask: () => void;
+  onCreateTask: (columnId: string) => void;
   onEditTask: (task: Task) => void;
   onDeleteColumn: (columnId: string) => void;
 }
 
-export function KanbanColumn({
+function KanbanColumnBase({
   id,
   title,
   headerColor,
+  accentColor,
   tasks,
   onCreateTask,
   onEditTask,
@@ -39,10 +42,20 @@ export function KanbanColumn({
         className={`flex flex-col h-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-200 ${
           isOver ? "ring-2 ring-blue-400 dark:ring-blue-500" : ""
         }`}
+        style={
+          accentColor ? { borderTop: `3px solid ${accentColor}` } : undefined
+        }
       >
         <CardHeader className="pb-3 flex-shrink-0 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
+              {accentColor && (
+                <span
+                  className="inline-block w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: accentColor }}
+                  aria-hidden
+                />
+              )}
               <CardTitle className={`text-sm font-semibold ${headerColor}`}>
                 {title}
               </CardTitle>
@@ -78,10 +91,7 @@ export function KanbanColumn({
           </div>
         </CardHeader>
 
-        <CardContent
-          className="flex-1 overflow-y-auto p-3 max-h-[calc(100vh-280px)] min-h-[400px]"
-          style={{ scrollbarWidth: "thin" }}
-        >
+        <CardContent className="flex-1 overflow-y-auto p-3 max-h-[calc(100vh-280px)] min-h-[400px] scrollbar-thin scrollbar-thumb-brand scrollbar-track-brand scrollbar-color-brand">
           <div ref={setNodeRef} className="space-y-3 h-full">
             <SortableContext
               items={tasks.map((task) => task.id)}
@@ -111,7 +121,7 @@ export function KanbanColumn({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onCreateTask}
+            onClick={() => onCreateTask(id)}
             className="w-full justify-start text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-slate-700/50 transition-all duration-200"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -122,3 +132,24 @@ export function KanbanColumn({
     </div>
   );
 }
+
+function areEqual(prev: KanbanColumnProps, next: KanbanColumnProps) {
+  if (
+    prev.id !== next.id ||
+    prev.title !== next.title ||
+    prev.headerColor !== next.headerColor ||
+    prev.accentColor !== next.accentColor
+  ) {
+    return false;
+  }
+  // Compare tasks by id and position to avoid re-rendering columns whose task list hasn't changed
+  if (prev.tasks.length !== next.tasks.length) return false;
+  for (let i = 0; i < prev.tasks.length; i++) {
+    const a = prev.tasks[i];
+    const b = next.tasks[i];
+    if (a.id !== b.id || a.position !== b.position) return false;
+  }
+  return true;
+}
+
+export const KanbanColumn = memo(KanbanColumnBase, areEqual);

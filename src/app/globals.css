@@ -116,3 +116,27 @@ body {
 .dark .scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
   background-color: rgb(75 85 99);
 }
+
+/* Brand scrollbar utilities */
+.scrollbar-thumb-brand::-webkit-scrollbar-thumb {
+  background-color: rgb(59 130 246); /* blue-500 */
+  border-radius: 9999px;
+}
+.dark .scrollbar-thumb-brand::-webkit-scrollbar-thumb {
+  background-color: rgb(96 165 250); /* blue-400 for dark */
+}
+
+.scrollbar-track-brand::-webkit-scrollbar-track {
+  background-color: rgba(59, 130, 246, 0.08); /* faint blue */
+}
+.dark .scrollbar-track-brand::-webkit-scrollbar-track {
+  background-color: rgba(96, 165, 250, 0.12);
+}
+
+/* Firefox thumb/track colors */
+.scrollbar-color-brand {
+  scrollbar-color: rgb(59 130 246) transparent;
+}
+.dark .scrollbar-color-brand {
+  scrollbar-color: rgb(96 165 250) transparent;
+}

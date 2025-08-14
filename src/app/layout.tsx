@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeToggle } from "@/components/theme-toggle";
 import DatabaseStatusIndicator from "@/components/database-status";
 import "./globals.css";
 
@@ -35,23 +35,28 @@ export default function RootLayout({
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between h-16">
                 <div className="flex items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+                  <Link
+                    href="/"
+                    aria-label="Go to home"
+                    className="flex items-center gap-3 group cursor-pointer"
+                  >
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg group-hover:opacity-90 transition-opacity">
                       <span className="text-white font-bold text-sm">K</span>
                     </div>
-                    <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    <h1 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       Kanban Board
                     </h1>
-                  </div>
+                  </Link>
                 </div>
                 <div className="flex items-center">
-                  <ThemeToggle />
+                  <DatabaseStatusIndicator />
                 </div>
               </div>
             </div>
           </nav>
-          <main className="flex-1 overflow-hidden w-full">{children}</main>
-          <DatabaseStatusIndicator />
+          <main className="max-w-7xl mx-auto flex-1 overflow-hidden w-full justify-center">
+            {children}
+          </main>
         </ThemeProvider>
       </body>
     </html>

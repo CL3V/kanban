@@ -105,7 +105,7 @@ export function ProjectList({
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -133,7 +133,7 @@ export function ProjectList({
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">

@@ -16,5 +16,19 @@
     "resolveJsonModule": true
   },
   "include": ["backend/**/*"],
-  "exclude": ["node_modules", "dist", "src", ".next"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src",
+    ".next",
+    // Exclude legacy/unused route variants and drivers from backend compile
+    "backend/routes/*-old.ts",
+    "backend/routes/*-fixed.ts",
+    "backend/routes/*-s3.ts",
+    "backend/routes/*-backup.ts",
+    "backend/routes/projects-clean.ts",
+    "backend/database/local-db.ts",
+    "backend/database/postgres-db.ts",
+    "backend/database/migrate.ts"
+  ]
 }
