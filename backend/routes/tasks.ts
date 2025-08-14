@@ -1,45 +1,44 @@
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
-import db from "../database/db";
+import { query } from "../database/postgres-db";
 import { Task, CreateTaskRequest, UpdateTaskRequest } from "../types";
 
 const router = express.Router();
 
 // Get all tasks for a board
-router.get("/board/:boardId", (req, res) => {
+router.get("/board/:boardId", async (req, res) => {
   const { boardId } = req.params;
 
-  db.all(
-    "SELECT * FROM tasks WHERE board_id = ? ORDER BY position ASC",
-    [boardId],
-    (err, rows) => {
-      if (err) {
-        console.error("Error fetching tasks:", err);
-        return res.status(500).json({ error: "Failed to fetch tasks" });
-      }
-      res.json(rows);
-    }
-  );
+  try {
+    const result = await query(
+      "SELECT * FROM tasks WHERE board_id = $1 ORDER BY position ASC",
+      [boardId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    res.status(500).json({ error: "Failed to fetch tasks" });
+  }
 });
 
 // Get a specific task
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
-  db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, row) => {
-    if (err) {
-      console.error("Error fetching task:", err);
-      return res.status(500).json({ error: "Failed to fetch task" });
-    }
-    if (!row) {
+  try {
+    const result = await query("SELECT * FROM tasks WHERE id = $1", [id]);
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: "Task not found" });
     }
-    res.json(row);
-  });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error fetching task:", error);
+    res.status(500).json({ error: "Failed to fetch task" });
+  }
 });
 
 // Create a new task
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
   const {
     board_id,
     column_id,
@@ -55,92 +54,59 @@ router.post("/", (req, res) => {
       .json({ error: "Task title and board ID are required" });
   }
 
-  // If no column_id is provided, get the first column for this board
-  if (!column_id) {
-    db.get(
-      "SELECT id FROM columns WHERE board_id = ? ORDER BY position ASC LIMIT 1",
-      [board_id],
-      (err, column: any) => {
-        if (err) {
-          console.error("Error getting default column:", err);
-          return res.status(500).json({ error: "Failed to create task" });
-        }
+  try {
+    let finalColumnId = column_id;
 
-        if (!column) {
-          return res
-            .status(400)
-            .json({
-              error:
-                "No columns found for this board. Please create a column first.",
-            });
-        }
+    // If no column_id is provided, get the first column for this board
+    if (!finalColumnId) {
+      const columnResult = await query(
+        "SELECT id FROM columns WHERE board_id = $1 ORDER BY position ASC LIMIT 1",
+        [board_id]
+      );
 
-        createTaskWithColumn(column.id);
+      if (columnResult.rows.length === 0) {
+        return res.status(400).json({
+          error:
+            "No columns found for this board. Please create a column first.",
+        });
       }
-    );
-  } else {
-    createTaskWithColumn(column_id);
-  }
 
-  function createTaskWithColumn(columnId: string) {
+      finalColumnId = columnResult.rows[0].id;
+    }
+
     const id = uuidv4();
-    const now = new Date().toISOString();
 
     // Get the next position for this column
-    db.get(
-      "SELECT MAX(position) as max_position FROM tasks WHERE column_id = ?",
-      [columnId],
-      (err, row: any) => {
-        if (err) {
-          console.error("Error getting max position:", err);
-          return res.status(500).json({ error: "Failed to create task" });
-        }
-
-        const position = (row?.max_position || 0) + 1;
-
-        db.run(
-          "INSERT INTO tasks (id, board_id, column_id, title, description, priority, assignee_id, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [
-            id,
-            board_id,
-            columnId,
-            title,
-            description,
-            priority,
-            assignee_id,
-            position,
-            now,
-            now,
-          ],
-          function (err) {
-            if (err) {
-              console.error("Error creating task:", err);
-              return res.status(500).json({ error: "Failed to create task" });
-            }
-
-            const task: Task = {
-              id,
-              board_id,
-              column_id: columnId,
-              title,
-              description,
-              priority: priority as Task["priority"],
-              assignee_id,
-              position,
-              created_at: now,
-              updated_at: now,
-            };
-
-            res.status(201).json(task);
-          }
-        );
-      }
+    const positionResult = await query(
+      "SELECT MAX(position) as max_position FROM tasks WHERE column_id = $1",
+      [finalColumnId]
     );
+
+    const position = (positionResult.rows[0]?.max_position || 0) + 1;
+
+    const result = await query(
+      "INSERT INTO tasks (id, board_id, column_id, title, description, priority, assignee_id, position) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+      [
+        id,
+        board_id,
+        finalColumnId,
+        title,
+        description,
+        priority,
+        assignee_id,
+        position,
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error("Error creating task:", error);
+    res.status(500).json({ error: "Failed to create task" });
   }
 });
 
 // Update a task
-router.put("/:id", (req, res) => {
+router.put("/:id", async (req, res) => {
   const { id } = req.params;
   const {
     title,
@@ -150,111 +116,70 @@ router.put("/:id", (req, res) => {
     assignee_id,
     position,
   }: UpdateTaskRequest = req.body;
-  const updated_at = new Date().toISOString();
 
-  db.run(
-    "UPDATE tasks SET title = COALESCE(?, title), description = COALESCE(?, description), column_id = COALESCE(?, column_id), priority = COALESCE(?, priority), assignee_id = COALESCE(?, assignee_id), position = COALESCE(?, position), updated_at = ? WHERE id = ?",
-    [
-      title,
-      description,
-      column_id,
-      priority,
-      assignee_id,
-      position,
-      updated_at,
-      id,
-    ],
-    function (err) {
-      if (err) {
-        console.error("Error updating task:", err);
-        return res.status(500).json({ error: "Failed to update task" });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ error: "Task not found" });
-      }
+  try {
+    const result = await query(
+      "UPDATE tasks SET title = COALESCE($2, title), description = COALESCE($3, description), column_id = COALESCE($4, column_id), priority = COALESCE($5, priority), assignee_id = COALESCE($6, assignee_id), position = COALESCE($7, position), updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *",
+      [id, title, description, column_id, priority, assignee_id, position]
+    );
 
-      // Fetch and return updated task
-      db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, row) => {
-        if (err) {
-          console.error("Error fetching updated task:", err);
-          return res
-            .status(500)
-            .json({ error: "Failed to fetch updated task" });
-        }
-        res.json(row);
-      });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Task not found" });
     }
-  );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error updating task:", error);
+    res.status(500).json({ error: "Failed to update task" });
+  }
 });
 
 // Update task positions (for drag and drop)
-router.put("/reorder/positions", (req, res) => {
+router.put("/reorder/positions", async (req, res) => {
   const { tasks } = req.body; // Array of { id, position, column_id }
 
   if (!Array.isArray(tasks)) {
     return res.status(400).json({ error: "Tasks array is required" });
   }
 
-  const updated_at = new Date().toISOString();
+  try {
+    // Use a transaction to update all task positions
+    await query("BEGIN");
 
-  // Use a transaction to update all task positions
-  db.serialize(() => {
-    db.run("BEGIN TRANSACTION");
-
-    let completed = 0;
-    let hasError = false;
-
-    tasks.forEach((task) => {
-      db.run(
-        "UPDATE tasks SET position = ?, column_id = COALESCE(?, column_id), updated_at = ? WHERE id = ?",
-        [task.position, task.column_id, updated_at, task.id],
-        function (err) {
-          if (err && !hasError) {
-            hasError = true;
-            console.error("Error updating task position:", err);
-            db.run("ROLLBACK");
-            return res
-              .status(500)
-              .json({ error: "Failed to update task positions" });
-          }
-
-          completed++;
-          if (completed === tasks.length && !hasError) {
-            db.run("COMMIT", (err) => {
-              if (err) {
-                console.error("Error committing transaction:", err);
-                return res
-                  .status(500)
-                  .json({ error: "Failed to update task positions" });
-              }
-              res.json({ message: "Task positions updated successfully" });
-            });
-          }
-        }
+    for (const task of tasks) {
+      await query(
+        "UPDATE tasks SET position = $1, column_id = COALESCE($2, column_id), updated_at = CURRENT_TIMESTAMP WHERE id = $3",
+        [task.position, task.column_id, task.id]
       );
-    });
-
-    if (tasks.length === 0) {
-      db.run("COMMIT");
-      res.json({ message: "No tasks to update" });
     }
-  });
+
+    await query("COMMIT");
+    res.json({ message: "Task positions updated successfully" });
+  } catch (error) {
+    await query("ROLLBACK");
+    console.error("Error updating task positions:", error);
+    res.status(500).json({ error: "Failed to update task positions" });
+  }
 });
 
 // Delete a task
-router.delete("/:id", (req, res) => {
+router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
-  db.run("DELETE FROM tasks WHERE id = ?", [id], function (err) {
-    if (err) {
-      console.error("Error deleting task:", err);
-      return res.status(500).json({ error: "Failed to delete task" });
-    }
-    if (this.changes === 0) {
+  try {
+    const result = await query("DELETE FROM tasks WHERE id = $1 RETURNING id", [
+      id,
+    ]);
+
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: "Task not found" });
     }
+
     res.json({ message: "Task deleted successfully" });
-  });
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    res.status(500).json({ error: "Failed to delete task" });
+  }
 });
 
 export default router;

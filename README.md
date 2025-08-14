@@ -1,6 +1,6 @@
 # Kanban Board - Project Management Tool
 
-A modern, full-stack Kanban board application built with Next.js, TypeScript, Express.js, and SQLite. This application allows you to create projects, manage boards within projects, and organize tasks using a drag-and-drop Kanban interface similar to Jira.
+A modern, full-stack Kanban board application built with Next.js, TypeScript, Express.js, and AWS DSQL (PostgreSQL). This application allows you to create projects, manage boards within projects, and organize tasks using a drag-and-drop Kanban interface similar to Jira.
 
 ## Features
 
@@ -18,7 +18,7 @@ A modern, full-stack Kanban board application built with Next.js, TypeScript, Ex
 - **Full-stack TypeScript**: Type-safe development across frontend and backend
 - **Modern UI**: Built with Tailwind CSS for responsive design
 - **RESTful API**: Express.js backend with structured API endpoints
-- **Database**: SQLite for lightweight, serverless data storage
+- **Database**: AWS DSQL (PostgreSQL) for scalable, managed database service
 - **Real-time Updates**: Efficient state management and data synchronization
 
 ## Tech Stack
@@ -34,7 +34,8 @@ A modern, full-stack Kanban board application built with Next.js, TypeScript, Ex
 ### Backend
 
 - **Express.js** - Web application framework
-- **SQLite3** - Lightweight database
+- **AWS DSQL (PostgreSQL)** - Managed PostgreSQL database service
+- **PostgreSQL (pg)** - Database client
 - **CORS** - Cross-origin resource sharing
 - **UUID** - Unique identifier generation
 
@@ -50,6 +51,8 @@ A modern, full-stack Kanban board application built with Next.js, TypeScript, Ex
 
 - Node.js 18+
 - npm or yarn
+- AWS Account with DSQL access
+- AWS CLI configured (optional, for AWS SDK)
 
 ### Setup
 
@@ -66,7 +69,41 @@ A modern, full-stack Kanban board application built with Next.js, TypeScript, Ex
    npm install
    ```
 
-3. **Start the development servers**
+3. **Environment Configuration**
+
+   Copy `.env.example` to `.env` and configure your AWS DSQL settings:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Update the following environment variables:
+
+   ```bash
+   # AWS Configuration
+   AWS_REGION=us-east-1
+   AWS_ACCESS_KEY_ID=your_aws_access_key_id
+   AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+
+   # AWS DSQL Configuration
+   DSQL_ENDPOINT=your-dsql-endpoint.dsql.us-east-1.on.aws
+   DSQL_PORT=5432
+   DSQL_DATABASE=kanban
+   DSQL_USER=your_dsql_user
+   DSQL_PASSWORD=your_dsql_password
+   DSQL_CLUSTER_ARN=arn:aws:dsql:us-east-1:your-account:cluster/your-cluster-id
+   DSQL_SECRET_ARN=arn:aws:secretsmanager:us-east-1:your-account:secret:your-secret-name
+   ```
+
+4. **Database Setup**
+
+   The database tables will be automatically created when the backend starts. To add sample data:
+
+   ```bash
+   npm run ts-node backend/database/migrate.ts
+   ```
+
+5. **Start the development servers**
 
    ```bash
    # Start both frontend and backend
@@ -77,7 +114,7 @@ A modern, full-stack Kanban board application built with Next.js, TypeScript, Ex
    npm run dev        # Frontend only (port 3000)
    ```
 
-4. **Open the application**
+6. **Open the application**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:3001/api
 
@@ -86,7 +123,7 @@ A modern, full-stack Kanban board application built with Next.js, TypeScript, Ex
 ```
 core-team-kanban/
 ├── backend/                 # Express.js backend
-│   ├── database/           # SQLite database and schema
+│   ├── database/           # PostgreSQL database and schema
 │   ├── routes/            # API route handlers
 │   ├── types/             # TypeScript type definitions
 │   └── server.ts          # Express server setup
@@ -192,4 +229,5 @@ This project is open source and available under the [MIT License](LICENSE).
 ---
 
 Built with ❤️ using Next.js, TypeScript, and Express.js
+
 # kanban

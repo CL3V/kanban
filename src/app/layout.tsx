@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import DatabaseStatusIndicator from "@/components/database-status";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -50,6 +51,7 @@ export default function RootLayout({
             </div>
           </nav>
           <main className="flex-1 overflow-hidden w-full">{children}</main>
+          <DatabaseStatusIndicator />
         </ThemeProvider>
       </body>
     </html>
